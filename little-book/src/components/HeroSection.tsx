@@ -1,6 +1,7 @@
 import { Button } from "./ui/button";
 import { BookOpen, Users, Heart } from "lucide-react";
-import heroImage from "@/assets/hero-books.jpg";
+// hero-books.jpg is not present in the repo; use the existing react.svg as a placeholder
+import heroImage from "@/assets/react.svg";
 
 export const HeroSection = () => {
   return (
