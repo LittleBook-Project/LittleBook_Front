@@ -1,27 +1,69 @@
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Layout } from "./components/Layout";
-import { HeroSection } from "./components/HeroSection";
-import { BookCard } from "./components/BookCard";
-import './App.css'
 
-function App() {
-  return (
-    <Layout>
-      <HeroSection />
-      <div className="container mx-auto px-4 py-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-        <BookCard
-          id="1"
-          title="Le Petit Prince"
-          author="Antoine de Saint-Exupéry"
-          coverImage="/src/assets/react.svg"
-          rating={4}
-          category="Classique"
-          review="Un conte poétique et philosophique"
-          likes={120}
-          comments={24}
-        />
-      </div>
-    </Layout>
-  )
-}
+import Home from "./pages/Home";
+import Profile from "./pages/Profile";
+import Auth from "./pages/Auth";
+import Welcome from "./pages/Welcome";
+import NotFound from "./pages/NotFound";
 
-export default App
+const queryClient = new QueryClient();
+
+/**
+ * 🔒 Route protégée : accessible seulement si un utilisateur est connecté
+ */
+const PrivateRoute = ({ children }: { children: JSX.Element }) => {
+  const user = localStorage.getItem("user");
+  return user ? children : <Navigate to="/auth" replace />;
+};
+
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <BrowserRouter>
+        <Routes>
+          {/* Authentification */}
+          <Route path="/auth" element={<Auth />} />
+
+          {/* Page d'accueil protégée */}
+          <Route
+            path="/"
+            element={
+              <PrivateRoute>
+                <Layout>
+                  <Home />
+                </Layout>
+              </PrivateRoute>
+            }
+          />
+
+          {/* Profil (protégé aussi) */}
+          <Route
+            path="/profile"
+            element={
+              <PrivateRoute>
+                <Layout>
+                  <Profile />
+                </Layout>
+              </PrivateRoute>
+            }
+          />
+
+          {/* Page de bienvenue après connexion */}
+          <Route path="/welcome" element={<Welcome />} />
+
+          {/* 404 */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
+    </TooltipProvider>
+  </QueryClientProvider>
+);
+
+export default App;

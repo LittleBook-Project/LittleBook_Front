@@ -1,68 +1,145 @@
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+/* Little Book - Modern Book Management App Design System */
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
+@layer base {
   :root {
-    color: #213547;
-    background-color: #ffffff;
+    /* Base colors - soft and modern */
+    --background: 0 0% 98%;
+    --foreground: 231 15% 20%;
+
+    /* Card and surface colors */
+    --card: 0 0% 100%;
+    --card-foreground: 231 15% 20%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 231 15% 20%;
+
+    /* Brand colors - violet/blue gradient theme */
+    --primary: 262 83% 58%;
+    --primary-foreground: 0 0% 100%;
+    --primary-light: 262 83% 68%;
+    --primary-dark: 262 83% 48%;
+
+    /* Secondary - soft rose/pink */
+    --secondary: 322 70% 85%;
+    --secondary-foreground: 231 15% 20%;
+    --secondary-light: 322 70% 90%;
+
+    /* Muted colors */
+    --muted: 210 20% 94%;
+    --muted-foreground: 215 15% 55%;
+
+    /* Accent - soft blue */
+    --accent: 212 85% 90%;
+    --accent-foreground: 212 85% 25%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 214 32% 88%;
+    --input: 214 32% 88%;
+    --ring: 262 83% 58%;
+
+    --radius: 0.75rem;
+
+    /* Custom gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(262 83% 58%), hsl(212 85% 65%));
+    --gradient-secondary: linear-gradient(135deg, hsl(322 70% 85%), hsl(262 83% 68%));
+    --gradient-soft: linear-gradient(180deg, hsl(0 0% 100%), hsl(210 20% 98%));
+
+    /* Shadows */
+    --shadow-soft: 0 4px 20px -8px hsl(262 83% 58% / 0.15);
+    --shadow-book: 0 8px 32px -12px hsl(231 15% 20% / 0.2);
+    --shadow-hover: 0 8px 40px -12px hsl(262 83% 58% / 0.25);
   }
-  a:hover {
-    color: #747bff;
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
   }
-  button {
-    background-color: #f9f9f9;
+
+ 
+  body {
+    @apply bg-background text-foreground font-sans;
+  }
+}
+
+@layer components {
+  .gradient-primary {
+    background: var(--gradient-primary);
+  }
+
+  .gradient-secondary {
+    background: var(--gradient-secondary);
+  }
+
+  .gradient-soft {
+    background: var(--gradient-soft);
+  }
+
+  .shadow-soft {
+    box-shadow: var(--shadow-soft);
+  }
+
+  .shadow-book {
+    box-shadow: var(--shadow-book);
+  }
+
+  .shadow-hover {
+    box-shadow: var(--shadow-hover);
+  }
+
+  .book-card {
+    @apply transition-all duration-300 hover:shadow-hover hover:-translate-y-1;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.4s ease-out forwards;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
