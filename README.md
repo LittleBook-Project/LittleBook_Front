@@ -210,40 +210,8 @@ export default defineConfig([
       ```
 
       2. Déploiement :
-
-      - Vercel : liez le repo, commande de build `npm run build`, dossier de sortie `dist`. Ajoutez vos variables `VITE_` via l'interface Vercel.
       - Netlify : configurez la commande de build `npm run build` et le dossier `dist` comme répertoire de publication.
-      - Autres (Surge, S3 + CloudFront, Docker) : servez le contenu du dossier `dist`.
 
-      Notes pour Vercel :
-
-      - Framework preset : choisissez "Other" (Vite) si nécessaire
-      - Configurez les variables d'environnement dans le dashboard Vercel (ex : `VITE_API_BASE_URL`)
-
-      ## CI (exemple GitHub Actions)
-
-      Voici un exemple minimal pour builder et vérifier le linter sur chaque push :
-
-      ```yaml
-      name: CI
-
-      on: [push, pull_request]
-
-      jobs:
-        build:
-          runs-on: ubuntu-latest
-          steps:
-            - uses: actions/checkout@v4
-            - name: Setup Node
-              uses: actions/setup-node@v4
-              with:
-                node-version: '18'
-            - run: npm ci
-            - run: npm run lint
-            - run: npm run build
-      ```
-
-      Ajoutez des étapes de test si vous intégrez Vitest/Jest.
 
       ## Structure du projet (aperçu)
 
@@ -291,11 +259,4 @@ export default defineConfig([
 
       Ouvrez une issue sur le dépôt principal pour les bugs ou les questions. Mentionnez le contexte (branch, commit, étapes pour reproduire).
 
-      ---
-
-      Si vous souhaitez, je peux :
-      - lancer `npm run dev` pour vérifier que le projet démarre (à votre demande),
-      - ajouter un workflow GitHub Actions complet (`.github/workflows/ci.yml`),
-      - ajouter un guide spécifique pour Firebase (exemples d'initialisation dans `src/lib`).
-
-      Merci — le README a été complété.
+ 
