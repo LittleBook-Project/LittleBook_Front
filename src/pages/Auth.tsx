@@ -35,26 +35,28 @@ export default function Auth() {
       const cred = await signInWithPopup(auth, provider);
       const user = cred.user;
 
-      console.log("user" + user);
-
-      //Stockage des infos utilisateur dans localStorage
-      localStorage.setItem(
-        "user",
-        JSON.stringify({
-          displayName: user.displayName,
-          email: user.email,
-          photoURL: user.photoURL,
-        })
-      );
-
-      // Optionnel : appel à ton backend
       try {
         const idToken = await user.getIdToken();
         const resp = await fetch("http://localhost:8080/api/auth/me", {
           headers: { Authorization: `Bearer ${idToken}` },
         });
-        const data = await resp.text();
-        console.log("Réponse backend :", data);
+        // On parse la réponse JSON du backend
+        const backendData = await resp.json();
+        console.log("Réponse backend :", backendData);
+        localStorage.setItem(
+          "user",
+          JSON.stringify({
+            // On fait correspondre les champs de votre API
+            displayName: backendData.name,     // name -> displayName
+            email: backendData.email,
+            photoURL: backendData.picture,     // picture -> photoURL
+            uid: backendData.uid,              // On peut aussi stocker les infos supplémentaires
+            roles: backendData.roles,
+          })
+        );
+
+        // 4. Redirection vers la page de bienvenue
+        navigate("/welcome");
       } catch (backendError) {
         console.warn("⚠️ Backend non joignable :", backendError);
       }
