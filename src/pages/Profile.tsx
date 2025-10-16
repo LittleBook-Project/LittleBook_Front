@@ -5,14 +5,26 @@ import { BookCard } from "../components/BookCard";
 import { Edit, Settings, BookOpen, Users, Heart, Calendar } from "lucide-react";
 import { useEffect, useState } from "react";
 
-  interface UserData {
-    displayName: string | null;
-    email: string | null;
-    photoURL: string | null;
-  }
+interface UserData {
+  displayName: string;
+  email: string;
+  photoURL: string;
+  bio: string;
+  joinDate: string;
+  stats: {
+    booksRead: number;
+    followers: number;
+    following: number;
+    reviews: number;
+  };
+  favoriteGenres: string[];
+  recentBooks: any[]; // You might want to create a specific type for Book
+}
 
-// Mock data pour le profil
-const user2 = {
+const mockUser = {
+  displayName: "Jeanne L.",
+  email: "jeanne.l@email.com",
+  photoURL: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&h=300&fit=crop&q=80",
   bio: "Passionnée de littérature française et de développement personnel. Toujours à la recherche du prochain coup de cœur ! 📚✨",
   joinDate: "Mars 2023",
   stats: {
@@ -28,37 +40,37 @@ const user2 = {
       title: "L'Étranger",
       author: "Albert Camus",
       coverImage: "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=300&h=400&fit=crop",
-      rating: 5,
-      category: "Classique",
       review: "Une œuvre incontournable qui questionne l'absurdité de la condition humaine.",
-      likes: 124,
-      comments: 32
     },
     {
       id: "2",
       title: "Atomic Habits",
       author: "James Clear",
       coverImage: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=300&h=400&fit=crop",
-      rating: 5,
-      category: "Développement personnel",
       review: "Une méthode efficace pour construire de bonnes habitudes.",
-      likes: 78,
-      comments: 24
     }
   ]
 };
 
 export default function Profile() {
 
-    const [user, setUser] = useState<UserData | null>(null);
+  const [user, setUser] = useState<UserData | null>(null);
 
-     useEffect(() => {
-      const storedUser = localStorage.getItem("user");
-      if (storedUser) {
-        setUser(JSON.parse(storedUser) as UserData);
-      } else {
-      }
-    }, []);
+  useEffect(() => {
+    // --- Load user data from localStorage ---
+    const storedUser = localStorage.getItem("user");
+
+    if (storedUser) {
+      // If user data exists in localStorage, parse it and set it as the state.
+      setUser(JSON.parse(storedUser));
+    } else {
+      // If no user is found in localStorage, use the mock data as a default.
+      setUser(mockUser);
+      // Also, save this mock data to localStorage for the next visit.
+      localStorage.setItem("user", JSON.stringify(mockUser));
+    }
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
@@ -70,7 +82,6 @@ export default function Profile() {
                 {/* Avatar and Basic Info */}
                 <div className="flex flex-col items-center md:items-start">
                   <img 
-                    src={user.photoURL} 
                     alt={user.displayName}
                     className="w-32 h-32 rounded-full shadow-book mb-4"
                   />
@@ -79,7 +90,52 @@ export default function Profile() {
                     Modifier le profil
                   </Button>
                 </div>
-                         
+
+                {/* Profile Details */}
+                <div className="flex-1 space-y-4">
+                  <div>
+                    <h1 className="text-3xl font-bold mb-1">{user.displayName}</h1>
+                    <p className="text-muted-foreground mb-2">{user.displayName}</p>
+                    <div className="flex items-center text-sm text-muted-foreground mb-4">
+                      <Calendar className="mr-1 h-4 w-4" />
+                      Membre depuis {user.joinDate}
+                    </div>
+                    <p className="text-foreground leading-relaxed">{user.bio}</p>
+                  </div>
+
+                  {/* Stats */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="text-center p-4 bg-muted/30 rounded-lg">
+                      <div className="text-2xl font-bold text-primary">{user.stats.booksRead}</div>
+                      <div className="text-sm text-muted-foreground">Livres lus</div>
+                    </div>
+                    <div className="text-center p-4 bg-muted/30 rounded-lg">
+                      <div className="text-2xl font-bold text-primary">{user.stats.followers}</div>
+                      <div className="text-sm text-muted-foreground">Followers</div>
+                    </div>
+                    <div className="text-center p-4 bg-muted/30 rounded-lg">
+                      <div className="text-2xl font-bold text-primary">{user.stats.following}</div>
+                      <div className="text-sm text-muted-foreground">Suivis</div>
+                    </div>
+                    <div className="text-center p-4 bg-muted/30 rounded-lg">
+                      <div className="text-2xl font-bold text-primary">{user.stats.reviews}</div>
+                      <div className="text-sm text-muted-foreground">Critiques</div>
+                    </div>
+                  </div>
+
+                  {/* Favorite Genres */}
+                  <div>
+                    <h3 className="font-semibold mb-2">Genres préférés</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {user.favoriteGenres.map((genre) => (
+                        <Badge key={genre} variant="secondary" className="bg-secondary/50">
+                          {genre}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
                 {/* Action Buttons */}
                 <div className="flex flex-col gap-2">
                   <Button variant="outline" size="sm" className="rounded-full">
@@ -95,6 +151,52 @@ export default function Profile() {
             </CardContent>
           </Card>
         </div>
+
+        <div className="grid lg:grid-cols-3 gap-8">
+          {/* Recent Activity */}
+          <div className="lg:col-span-2 space-y-6">
+            <Card className="shadow-soft border-border/50">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <BookOpen className="mr-2 h-5 w-5" />
+                  Lectures récentes
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid md:grid-cols-2 gap-4">
+                  {user.recentBooks.map((book) => (
+                    <BookCard key={book.id} {...book} className="animate-fade-in" />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Reading Goals */}
+            <Card className="shadow-soft border-border/50">
+              <CardHeader>
+                <CardTitle>Objectifs de lecture 2024</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex justify-between text-sm mb-2">
+                      <span>Livres lus cette année</span>
+                      <span className="font-medium">24 / 50</span>
+                    </div>
+                    <div className="w-full bg-muted rounded-full h-2">
+                      <div 
+                        className="gradient-primary h-2 rounded-full transition-all duration-500" 
+                        style={{ width: "48%" }}
+                      ></div>
+                    </div>
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Vous êtes en bonne voie pour atteindre votre objectif ! 🎯
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
           {/* Sidebar */}
           <div className="space-y-6">
@@ -135,5 +237,6 @@ export default function Profile() {
           </div>
         </div>
       </div>
+    </div>
   );
 }
