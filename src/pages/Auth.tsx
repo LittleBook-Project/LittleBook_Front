@@ -37,7 +37,7 @@ export default function Auth() {
 
       try {
         const idToken = await user.getIdToken();
-        const resp = await fetch("http://localhost:8080/api/auth/me", {
+        const resp = await fetch("http://localhost:8081/api/auth/me", {
           headers: { Authorization: `Bearer ${idToken}` },
         });
         // On parse la réponse JSON du backend

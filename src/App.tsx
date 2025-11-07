@@ -10,6 +10,7 @@ import Profile from "./pages/Profile";
 import Auth from "./pages/Auth";
 import Welcome from "./pages/Welcome";
 import NotFound from "./pages/NotFound";
+import Admin from "./pages/Admin";
 
 const queryClient = new QueryClient();
 
@@ -50,6 +51,18 @@ const App = () => (
               <PrivateRoute>
                 <Layout>
                   <Profile />
+                </Layout>
+              </PrivateRoute>
+            }
+          />
+
+          {/* Page d'administration (protégée) */}
+          <Route
+            path="/admin"
+            element={
+              <PrivateRoute>
+                <Layout>
+                  <Admin />
                 </Layout>
               </PrivateRoute>
             }
