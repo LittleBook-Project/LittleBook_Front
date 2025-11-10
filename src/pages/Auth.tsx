@@ -5,8 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../co
 import { BookOpen } from "lucide-react";
 
 // Firebase imports
-import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { FirebaseError, initializeApp } from "firebase/app";
+import { getAuth, GoogleAuthProvider, OAuthProvider, signInWithPopup } from "firebase/auth";
 
 // Config Firebase
 const firebaseConfig = {
@@ -25,7 +25,31 @@ const auth = getAuth(app);
 
 export default function Auth() {
   const [loadingGoogle, setLoadingGoogle] = useState(false);
+  const [loadingMicrosoft, setLoadingMicrosoft] = useState(false);
   const navigate = useNavigate();
+
+    const callBackendAndStoreUser = async (idToken: string) => {
+    try {
+      const resp = await fetch("http://localhost:8080/api/auth/me", {
+        headers: { Authorization: `Bearer ${idToken}` },
+      });
+      const backendData = await resp.json();
+      console.log("Réponse backend :", backendData);
+
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          displayName: backendData.name,
+          email: backendData.email,
+          photoURL: backendData.picture,
+          uid: backendData.uid,
+          roles: backendData.roles,
+        }),
+      );
+    } catch (backendError) {
+      console.warn("⚠️ Backend non joignable ou erreur /api/auth/me :", backendError);
+    }
+  };
 
   const handleGoogleLogin = async () => {
     setLoadingGoogle(true);
@@ -34,6 +58,9 @@ export default function Auth() {
     try {
       const cred = await signInWithPopup(auth, provider);
       const user = cred.user;
+      const idToken = await user.getIdToken();
+
+      await callBackendAndStoreUser(idToken);
 
       try {
         const idToken = await user.getIdToken();
@@ -43,8 +70,7 @@ export default function Auth() {
         // On parse la réponse JSON du backend
         const backendData = await resp.json();
         console.log("Réponse backend :", backendData);
-        localStorage.setItem(
-          "user",
+        localStorage.setItem("user",
           JSON.stringify({
             // On fait correspondre les champs de votre API
             displayName: backendData.name,     // name -> displayName
@@ -63,11 +89,80 @@ export default function Auth() {
 
       // Redirection vers la page de bienvenue
       navigate("/welcome");
-    } catch (error: any) {
-      console.error("❌ Erreur Google Login :", error);
-      alert("Erreur de connexion Google : " + error.message);
+    } catch (error: unknown) {
+      if (error instanceof FirebaseError) {
+        console.error("❌ Erreur Firebase Google Login :", error);
+        alert("Erreur Firebase : " + error.message);
+        return;
+      }
+      console.error("❌ Erreur inconnue Google Login :", error);
     } finally {
       setLoadingGoogle(false);
+    }
+  };
+
+  const handleMicrosoftLogin = async () => {
+    setLoadingMicrosoft(true);
+    const provider = new OAuthProvider('microsoft.com');
+
+    try {
+      const cred = await signInWithPopup(auth, provider);
+      const user = cred.user;
+      const idToken = await user.getIdToken();
+
+      try {
+        const resp = await fetch("http://localhost:8080/api/auth/me", {
+          headers: { Authorization: `Bearer ${idToken}` },
+        });
+
+        if (!resp.ok) {
+          console.warn("⚠️ Réponse non OK du backend :", resp.status);
+          throw new Error(`Backend non joignable : ${resp.status}`);
+        }
+
+        const backendData = await resp.json();
+        console.log("Réponse backend :", backendData);
+
+        localStorage.setItem("user",
+          JSON.stringify({
+            displayName: backendData.name,
+            email: backendData.email,
+            photoURL: backendData.picture,
+            uid: backendData.uid,
+            roles: backendData.roles,
+          })
+        );
+    } catch (error : unknown) {
+        console.warn("⚠️ Backend non joignable ou erreur /api/auth/me :", error);
+      }
+      navigate("/welcome");
+    }catch(error: unknown) {
+      if (error instanceof FirebaseError) {
+        console.error("❌ Erreur Firebase Microsoft Login :", error);
+        alert("Erreur Firebase : " + error.message);
+        
+        switch (error.code) {
+          case 'auth/popup-closed-by-user':
+            console.warn("L'utilisateur a fermé la fenêtre popup avant de terminer la connexion.");
+            break;
+          case 'auth/cancelled-popup-request':
+            console.warn("Une autre demande de popup est déjà en cours.");
+            break;
+          default:
+            console.error("Erreur Firebase inconnue :", error);
+        }
+      } else if(error instanceof Error){
+        console.error("❌ Erreur inconnue Microsoft Login :", error);
+      } else {
+        if (error instanceof FirebaseError) {
+          console.error("❌ Erreur Firebase Microsoft Login :", error);
+          alert("Erreur Firebase : " + error.message);
+          return;
+      }
+        console.warn("⚠️ Backend non joignable ou erreur /api/auth/me :", error);
+      } 
+    } finally {
+      setLoadingMicrosoft(false);
     }
   };
 
@@ -113,6 +208,26 @@ export default function Auth() {
                 </>
               )}
             </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full flex items-center justify-center gap-2 rounded-lg"
+              onClick={handleMicrosoftLogin}
+              disabled={loadingMicrosoft}
+            >
+              {loadingMicrosoft ? (
+                "Connexion en cours..."
+              ) : (
+                <>
+                  <img
+                    src="https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg"
+                    alt="Microsoft logo"
+                    className="w-5 h-5"
+                  />
+                  <span>Continuer avec Microsoft</span>
+                </>
+              )}
+            </Button>
           </CardContent>
         </Card>
 
@@ -125,7 +240,9 @@ export default function Auth() {
             </p>
           </CardContent>
         </Card>
+        
       </div>
     </div>
   );
+
 }
