@@ -43,6 +43,26 @@ export default defineConfig([
 ])
 ```
 
+## Docker / Docker Compose (build & serve)
+
+Instructions to build and run the production container that serves the built Vite app with nginx:
+
+- Build the Docker image and start the container:
+
+  - Using Docker Compose:
+
+    docker-compose up --build -d
+
+  - Or with Docker alone:
+
+    docker build -t littlebook_frontend:latest .
+    docker run -p 80:80 littlebook_frontend:latest
+
+- The app will be available at http://localhost/ (port 80).
+
+Notes:
+- The repository uses Vite. The multi-stage `Dockerfile` first runs `npm install` and `npm run build` to produce the `dist` folder, then copies the build into an nginx image and serves it with a SPA fallback.
+- If you want to run in development mode (with HMR), run `npm run dev` locally or create a compose override that mounts the source and runs `vite`.
 You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
 
 ```js
