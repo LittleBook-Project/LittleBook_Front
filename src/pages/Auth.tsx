@@ -33,6 +33,7 @@ export default function Auth() {
   const [loadingGoogle, setLoadingGoogle] = useState(false);
   const navigate = useNavigate();
   const AUTH_BASE = ((import.meta as any).env?.VITE_AUTH_BASE as string) || "";
+  const USE_RELATIVE = ((import.meta as any).env?.VITE_USE_RELATIVE_API as string) === "true";
 
   const handleGoogleLogin = async () => {
     setLoadingGoogle(true);
@@ -49,7 +50,7 @@ export default function Auth() {
           `${idToken?.slice?.(0, 20) ?? ""}... len=${idToken?.length ?? 0}`
         );
 
-        const authUrl = AUTH_BASE ? `${AUTH_BASE}/auth/me` : "/api/auth/me";
+        const authUrl = USE_RELATIVE ? "/api/auth/me" : (AUTH_BASE ? `${AUTH_BASE}/auth/me` : "/api/auth/me");
         const resp = await fetch(authUrl, {
           headers: { Authorization: `Bearer ${idToken}` },
           credentials: "include",
@@ -152,7 +153,7 @@ export default function Auth() {
         const user = result.user;
         const idToken = await user.getIdToken();
 
-        const authUrl = AUTH_BASE ? `${AUTH_BASE}/auth/me` : "/api/auth/me";
+        const authUrl = USE_RELATIVE ? "/api/auth/me" : (AUTH_BASE ? `${AUTH_BASE}/auth/me` : "/api/auth/me");
         const resp = await fetch(authUrl, {
           headers: { Authorization: `Bearer ${idToken}` },
           credentials: "include",
