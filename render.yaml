@@ -15,7 +15,6 @@ services:
     # Avoid using an unsupported `publishPath` key in the blueprint; set the publish
     # directory in the dashboard if needed.
     plan: "free"
-    region: "oregon"
     envVars:
       - key: "VITE_AUTH_BASE"
         # Production target (Render service)
