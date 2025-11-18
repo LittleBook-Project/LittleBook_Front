@@ -41,6 +41,22 @@ const Admin = () => {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const ADMIN_BASE = ((import.meta as any).env?.VITE_ADMIN_BASE as string) || "";
+  const USER_BASE = ((import.meta as any).env?.VITE_USER_BASE as string) || "";
+  const USE_RELATIVE = ((import.meta as any).env?.VITE_USE_RELATIVE_API as string) === "true";
+
+  console.debug("Admin config => ADMIN_BASE:", ADMIN_BASE, "USER_BASE:", USER_BASE, "USE_RELATIVE:", USE_RELATIVE);
+
+  const adminUrl = (path: string) => {
+    // path should start with '/'
+    if (USE_RELATIVE) return path;
+    return ADMIN_BASE ? `${ADMIN_BASE}${path}` : path;
+  };
+
+  const userUrl = (path: string) => {
+    if (USE_RELATIVE) return path;
+    return USER_BASE ? `${USER_BASE}${path}` : path;
+  };
 
   useEffect(() => {
     // Fetch data when component mounts
@@ -49,10 +65,10 @@ const Admin = () => {
       setError(null);
       try {
         const [usersRes, loginEventsRes, reviewsRes, summaryRes] = await Promise.all([
-          fetch("/api/stats/users"),
-          fetch("/api/stats/login-events"),
-          fetch("/api/stats/reviews"),
-          fetch("/api/stats/summary"),
+          fetch(adminUrl('/api/stats/users')),
+          fetch(adminUrl('/api/stats/login-events')),
+          fetch(adminUrl('/api/stats/reviews')),
+          fetch(adminUrl('/api/stats/summary')),
         ]);
 
         // Vérification des réponses
@@ -68,7 +84,7 @@ const Admin = () => {
         // Récupération des détails des utilisateurs
         const userDetailsPromises = usersData.map(async (user: UserLoginStats) => {
           try {
-            const res = await fetch(`/user/${user.userId}`);
+            const res = await fetch(userUrl(`/user/${user.userId}`));
             if (res.ok) {
               return [user.userId, await res.json()];
             }
