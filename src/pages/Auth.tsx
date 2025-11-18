@@ -50,7 +50,7 @@ export default function Auth() {
           `${idToken?.slice?.(0, 20) ?? ""}... len=${idToken?.length ?? 0}`
         );
 
-        const authUrl = USE_RELATIVE ? "/api/auth/me" : (AUTH_BASE ? `${AUTH_BASE}api/auth/me` : "/api/auth/me");
+        const authUrl = USE_RELATIVE ? "/api/auth/me" : (AUTH_BASE ? `${AUTH_BASE}/api/auth/me` : "/api/auth/me");
         const resp = await fetch(authUrl, {
           headers: { Authorization: `Bearer ${idToken}` },
           credentials: "include",
