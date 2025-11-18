@@ -11,7 +11,9 @@ services:
     repo: "https://github.com/LittleBook-Project/LittleBook_Front"
     branch: "main"
     buildCommand: "npm ci && npm run build"
-    publishPath: "dist"
+    # For static sites runtime: static, Render will detect and publish the build output.
+    # Avoid using an unsupported `publishPath` key in the blueprint; set the publish
+    # directory in the dashboard if needed.
     plan: "free"
     region: "oregon"
     envVars:
