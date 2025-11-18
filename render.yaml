@@ -3,7 +3,8 @@
 # provides production env vars that point to your backend Render services.
 
 services:
-  - type: "static_site"
+  - type: "web"
+    runtime: "static"
     name: "littlebook-frontend"
     env: "production"
     # Replace repo and branch with your GitHub repo details if you use automatic deploys
