@@ -1,0 +1,34 @@
+# Render manifest for LittleBook frontend
+# This manifest deploys the frontend as a Static Site on Render and
+# provides production env vars that point to your backend Render services.
+
+services:
+  - type: "static_site"
+    name: "littlebook-frontend"
+    env: "production"
+    # Replace repo and branch with your GitHub repo details if you use automatic deploys
+    repo: "https://github.com/LittleBook-Project/LittleBook_Front"
+    branch: "main"
+    buildCommand: "npm ci && npm run build"
+    publishPath: "dist"
+    plan: "free"
+    region: "oregon"
+    envVars:
+      - key: "VITE_AUTH_BASE"
+        # Production target (Render service)
+        value: "https://littlebook-auth.onrender.com"
+      - key: "VITE_USER_BASE"
+        value: "https://littlebook-user.onrender.com"
+      - key: "VITE_ADMIN_BASE"
+        value: "https://littlebook-admin.onrender.com"
+      - key: "VITE_REVIEW_BASE"
+        value: "https://littlebook-review.onrender.com"
+      - key: "VITE_BOOK_BASE"
+        value: "https://littlebook-book.onrender.com"
+
+# Notes:
+# - In development you already have a `.env` pointing to localhost.
+# - The `publishPath` must match your Vite build output folder (commonly `dist` or `build`).
+#   Update `publishPath` if your project outputs to `build` instead.
+# - If you prefer to keep values secret, remove the `envVars` lines and set the
+#   corresponding environment variables in the Render dashboard (Service -> Environment).
