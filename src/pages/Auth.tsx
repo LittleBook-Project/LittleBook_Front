@@ -22,9 +22,6 @@ const firebaseConfig = {
 // Initialisation Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const provider = new GoogleAuthProvider();
-
-provider.setCustomParameters ({ prompt: 'select_account' });
 
 export default function Auth() {
   const [loadingGoogle, setLoadingGoogle] = useState(false);
@@ -57,6 +54,11 @@ export default function Auth() {
   const handleGoogleLogin = async () => {
     setLoadingGoogle(true);
     const provider = new GoogleAuthProvider();
+    // setCustomParameters is optional; place inside the function so module import
+    // does not execute provider side-effects (makes component test-friendly)
+    if (typeof provider.setCustomParameters === 'function') {
+      provider.setCustomParameters({ prompt: 'select_account' });
+    }
 
     try {
       const cred = await signInWithPopup(auth, provider);
