@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
@@ -6,7 +6,13 @@ import { BookOpen } from "lucide-react";
 
 // Firebase imports
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
+} from "firebase/auth";
 
 // Config Firebase
 const firebaseConfig = {
@@ -26,6 +32,8 @@ const auth = getAuth(app);
 export default function Auth() {
   const [loadingGoogle, setLoadingGoogle] = useState(false);
   const navigate = useNavigate();
+  const AUTH_BASE = ((import.meta as any).env?.VITE_AUTH_BASE as string) || "";
+  const USE_RELATIVE = ((import.meta as any).env?.VITE_USE_RELATIVE_API as string) === "true";
 
   const handleGoogleLogin = async () => {
     setLoadingGoogle(true);
@@ -37,26 +45,67 @@ export default function Auth() {
 
       try {
         const idToken = await user.getIdToken();
-        const resp = await fetch("http://localhost:8081/api/auth/me", {
-          headers: { Authorization: `Bearer ${idToken}` },
-        });
-        // On parse la réponse JSON du backend
-        const backendData = await resp.json();
-        console.log("Réponse backend :", backendData);
-        localStorage.setItem(
-          "user",
-          JSON.stringify({
-            // On fait correspondre les champs de votre API
-            displayName: backendData.name,     // name -> displayName
-            email: backendData.email,
-            photoURL: backendData.picture,     // picture -> photoURL
-            uid: backendData.uid,              // On peut aussi stocker les infos supplémentaires
-            roles: backendData.roles,
-          })
+        console.debug(
+          "Firebase idToken (prefix):",
+          `${idToken?.slice?.(0, 20) ?? ""}... len=${idToken?.length ?? 0}`
         );
 
-        // 4. Redirection vers la page de bienvenue
-        navigate("/welcome");
+        const authUrl = USE_RELATIVE ? "/api/auth/me" : (AUTH_BASE ? `${AUTH_BASE}/api/auth/me` : "/api/auth/me");
+        const resp = await fetch(authUrl, {
+          headers: { Authorization: `Bearer ${idToken}` },
+          credentials: "include",
+        });
+
+        console.debug("/api/auth/me status:", resp.status);
+        const text = await resp.text();
+        if (!resp.ok) {
+          console.warn("Backend /api/auth/me returned", resp.status, text);
+          if (resp.status === 401) {
+            alert("Authentification refusée (401). Le backend a rejeté le token.");
+          }
+          let backendData: any = null;
+          try {
+            backendData = text ? JSON.parse(text) : null;
+          } catch (parseErr) {
+            console.warn("Impossible d'analyser la réponse backend en JSON:", parseErr);
+          }
+          if (backendData) {
+            localStorage.setItem(
+              "user",
+              JSON.stringify({
+                displayName: backendData.name,
+                email: backendData.email,
+                photoURL: backendData.picture,
+                uid: backendData.uid,
+                roles: backendData.roles,
+              })
+            );
+            navigate("/welcome");
+          }
+        } else {
+          let backendData: any = null;
+          try {
+            backendData = text ? JSON.parse(text) : null;
+          } catch (parseErr) {
+            console.warn("Failed to parse JSON from backend (OK response):", parseErr);
+          }
+          if (backendData) {
+            console.log("Réponse backend :", backendData);
+            localStorage.setItem(
+              "user",
+              JSON.stringify({
+                displayName: backendData.name,
+                email: backendData.email,
+                photoURL: backendData.picture,
+                uid: backendData.uid,
+                roles: backendData.roles,
+              })
+            );
+            navigate("/welcome");
+          } else {
+            console.warn("Backend returned empty or non-JSON body despite 200 OK");
+          }
+        }
       } catch (backendError) {
         console.warn("⚠️ Backend non joignable :", backendError);
       }
@@ -65,11 +114,88 @@ export default function Auth() {
       navigate("/welcome");
     } catch (error: any) {
       console.error("❌ Erreur Google Login :", error);
-      alert("Erreur de connexion Google : " + error.message);
+      // If the popup flow is blocked by Cross-Origin-Opener-Policy or similar
+      // issues, fall back to the redirect flow which avoids relying on
+      // window.closed/window.opener behavior.
+      const msg = String(error?.message || "").toLowerCase();
+      const code = String(error?.code || "").toLowerCase();
+      if (
+        msg.includes("cross-origin-opener-policy") ||
+        msg.includes("window.closed") ||
+        code.includes("operation-not-supported") ||
+        code.includes("popup-blocked")
+      ) {
+        try {
+          console.warn("Popup blocked by COOP — falling back to redirect sign-in.");
+          await signInWithRedirect(auth, provider);
+          return; // redirect will navigate away
+        } catch (redirErr) {
+          console.error("❌ Redirect sign-in failed:", redirErr);
+          alert("Erreur de connexion Google (redirect) : " + String(redirErr?.message || redirErr));
+        }
+      } else {
+        alert("Erreur de connexion Google : " + error.message);
+      }
     } finally {
       setLoadingGoogle(false);
     }
   };
+
+  // Handle the redirect result when using signInWithRedirect flow
+  useEffect(() => {
+    let mounted = true;
+
+    const handleRedirect = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (!result || !result.user) return;
+
+        const user = result.user;
+        const idToken = await user.getIdToken();
+
+        const authUrl = USE_RELATIVE ? "/api/auth/me" : (AUTH_BASE ? `${AUTH_BASE}/auth/me` : "/api/auth/me");
+        const resp = await fetch(authUrl, {
+          headers: { Authorization: `Bearer ${idToken}` },
+          credentials: "include",
+        });
+
+        if (!mounted) return;
+
+        if (resp.ok) {
+          const text = await resp.text();
+          let backendData: any = null;
+          try {
+            backendData = text ? JSON.parse(text) : null;
+          } catch (err) {
+            console.warn("Redirect: failed to parse backend JSON", err);
+          }
+          if (backendData) {
+            localStorage.setItem(
+              "user",
+              JSON.stringify({
+                displayName: backendData.name,
+                email: backendData.email,
+                photoURL: backendData.picture,
+                uid: backendData.uid,
+                roles: backendData.roles,
+              })
+            );
+            window.location.href = "/welcome";
+          }
+        } else {
+          console.warn("Redirect backend returned", resp.status, await resp.text());
+        }
+      } catch (err) {
+        console.debug("No redirect result or redirect handling failed:", err);
+      }
+    };
+
+    handleRedirect();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   return (
     <div className="min-h-screen gradient-soft flex items-center justify-center p-4">
