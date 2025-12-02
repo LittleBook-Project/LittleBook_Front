@@ -63,6 +63,40 @@ Instructions to build and run the production container that serves the built Vit
 Notes:
 - The repository uses Vite. The multi-stage `Dockerfile` first runs `npm install` and `npm run build` to produce the `dist` folder, then copies the build into an nginx image and serves it with a SPA fallback.
 - If you want to run in development mode (with HMR), run `npm run dev` locally or create a compose override that mounts the source and runs `vite`.
+
+## Fonctionnalités
+
+### 📚 Gestion des Livres
+
+L'application inclut une page de recherche et d'ajout de livres :
+
+1. **Accéder à la page** : Cliquez sur "Livres" dans la navbar ou visitez `/books`
+
+2. **Rechercher un livre** :
+   - Tapez un titre, auteur ou ISBN dans la barre de recherche
+   - Appuyez sur Entrée ou cliquez sur "Rechercher"
+
+3. **Workflow de recherche** :
+   - Le système cherche d'abord dans votre base de données locale
+   - Si aucun résultat, il propose des suggestions depuis OpenLibrary API
+   - Vous pouvez ajouter un livre suggéré en cliquant sur "Ajouter"
+
+4. **Backends requis** :
+   - Book Service doit tourner sur `http://localhost:8084` (ou via Docker backend)
+   - Les endpoints utilisés :
+     - `GET /books?q=...` - Recherche locale
+     - `GET /books/search/openlibrary?q=...` - Recherche OpenLibrary
+     - `POST /books/from-openlibrary` - Ajouter un livre
+
+### 🔧 Configuration Backend
+
+Le frontend est configuré pour proxifier les requêtes API via nginx :
+- `/api/` → Auth Service (port 8082)
+- `/user/` → User Service (port 8083)
+- `/books/` → Book Service (port 8084)
+- `/api/stats/` → Admin Service (port 8085)
+
+Les URLs sont relatives dans le code frontend, nginx gère le routing vers les backends.
 You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
 
 ```js

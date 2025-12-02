@@ -21,6 +21,11 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      "/books": {
+        target: "http://localhost:8084",
+        changeOrigin: true,
+        secure: false,
+      },
     },
   },
 });
