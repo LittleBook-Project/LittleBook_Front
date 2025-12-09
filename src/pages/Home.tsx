@@ -1,10 +1,8 @@
 import { BookCard } from "@/components/BookCard";
 import { HeroSection } from "@/components/HeroSection";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp, Users, BookOpen, Loader2 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { Card, CardContent } from "@/components/ui/card";
+import { TrendingUp, Users, BookOpen } from "lucide-react";
 
 interface Book {
   id: string;

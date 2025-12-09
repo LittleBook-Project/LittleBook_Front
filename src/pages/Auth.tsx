@@ -5,14 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../co
 import { BookOpen } from "lucide-react";
 
 // Firebase imports
-import { initializeApp } from "firebase/app";
-import {
-  getAuth,
-  GoogleAuthProvider,
-  signInWithPopup,
-  signInWithRedirect,
-  getRedirectResult,
-} from "firebase/auth";
+import { FirebaseError, initializeApp } from "firebase/app";
+import { getAuth, GoogleAuthProvider, OAuthProvider, signInWithPopup } from "firebase/auth";
 
 // Config Firebase
 const firebaseConfig = {
@@ -31,17 +25,49 @@ const auth = getAuth(app);
 
 export default function Auth() {
   const [loadingGoogle, setLoadingGoogle] = useState(false);
+  const [loadingMicrosoft, setLoadingMicrosoft] = useState(false);
   const navigate = useNavigate();
   const AUTH_BASE = ((import.meta as any).env?.VITE_AUTH_BASE as string) || "";
   const USE_RELATIVE = ((import.meta as any).env?.VITE_USE_RELATIVE_API as string) === "true";
 
+    const callBackendAndStoreUser = async (idToken: string) => {
+    try {
+      const resp = await fetch("http://localhost:8080/api/auth/me", {
+        headers: { Authorization: `Bearer ${idToken}` },
+      });
+      const backendData = await resp.json();
+      console.log("Réponse backend :", backendData);
+
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          displayName: backendData.name,
+          email: backendData.email,
+          photoURL: backendData.picture,
+          uid: backendData.uid,
+          roles: backendData.roles,
+        }),
+      );
+    } catch (backendError) {
+      console.warn("⚠️ Backend non joignable ou erreur /api/auth/me :", backendError);
+    }
+  };
+
   const handleGoogleLogin = async () => {
     setLoadingGoogle(true);
     const provider = new GoogleAuthProvider();
+    // setCustomParameters is optional; place inside the function so module import
+    // does not execute provider side-effects (makes component test-friendly)
+    if (typeof provider.setCustomParameters === 'function') {
+      provider.setCustomParameters({ prompt: 'select_account' });
+    }
 
     try {
       const cred = await signInWithPopup(auth, provider);
       const user = cred.user;
+      const idToken = await user.getIdToken();
+
+      await callBackendAndStoreUser(idToken);
 
       try {
         const idToken = await user.getIdToken();
@@ -55,6 +81,19 @@ export default function Auth() {
           headers: { Authorization: `Bearer ${idToken}` },
           credentials: "include",
         });
+        // On parse la réponse JSON du backend
+        const backendData = await resp.json();
+        console.log("Réponse backend :", backendData);
+        localStorage.setItem("user",
+          JSON.stringify({
+            // On fait correspondre les champs de votre API
+            displayName: backendData.name,     // name -> displayName
+            email: backendData.email,
+            photoURL: backendData.picture,     // picture -> photoURL
+            uid: backendData.uid,              // On peut aussi stocker les infos supplémentaires
+            roles: backendData.roles,
+          })
+        );
 
         console.debug("/api/auth/me status:", resp.status);
         const text = await resp.text();
@@ -112,90 +151,82 @@ export default function Auth() {
 
       // Redirection vers la page de bienvenue
       navigate("/welcome");
-    } catch (error: any) {
-      console.error("❌ Erreur Google Login :", error);
-      // If the popup flow is blocked by Cross-Origin-Opener-Policy or similar
-      // issues, fall back to the redirect flow which avoids relying on
-      // window.closed/window.opener behavior.
-      const msg = String(error?.message || "").toLowerCase();
-      const code = String(error?.code || "").toLowerCase();
-      if (
-        msg.includes("cross-origin-opener-policy") ||
-        msg.includes("window.closed") ||
-        code.includes("operation-not-supported") ||
-        code.includes("popup-blocked")
-      ) {
-        try {
-          console.warn("Popup blocked by COOP — falling back to redirect sign-in.");
-          await signInWithRedirect(auth, provider);
-          return; // redirect will navigate away
-        } catch (redirErr) {
-          console.error("❌ Redirect sign-in failed:", redirErr);
-          alert("Erreur de connexion Google (redirect) : " + String(redirErr?.message || redirErr));
-        }
-      } else {
-        alert("Erreur de connexion Google : " + error.message);
+    } catch (error: unknown) {
+      if (error instanceof FirebaseError) {
+        console.error("❌ Erreur Firebase Google Login :", error);
+        alert("Erreur Firebase : " + error.message);
+        return;
       }
+      console.error("❌ Erreur inconnue Google Login :", error);
     } finally {
       setLoadingGoogle(false);
     }
   };
 
-  // Handle the redirect result when using signInWithRedirect flow
-  useEffect(() => {
-    let mounted = true;
+  const handleMicrosoftLogin = async () => {
+    setLoadingMicrosoft(true);
+    const provider = new OAuthProvider('microsoft.com');
 
-    const handleRedirect = async () => {
+    try {
+      const cred = await signInWithPopup(auth, provider);
+      const user = cred.user;
+      const idToken = await user.getIdToken();
+
       try {
-        const result = await getRedirectResult(auth);
-        if (!result || !result.user) return;
-
-        const user = result.user;
-        const idToken = await user.getIdToken();
-
-        const authUrl = USE_RELATIVE ? "/api/auth/me" : (AUTH_BASE ? `${AUTH_BASE}/auth/me` : "/api/auth/me");
-        const resp = await fetch(authUrl, {
+        const resp = await fetch("http://localhost:8080/api/auth/me", {
           headers: { Authorization: `Bearer ${idToken}` },
-          credentials: "include",
         });
 
-        if (!mounted) return;
-
-        if (resp.ok) {
-          const text = await resp.text();
-          let backendData: any = null;
-          try {
-            backendData = text ? JSON.parse(text) : null;
-          } catch (err) {
-            console.warn("Redirect: failed to parse backend JSON", err);
-          }
-          if (backendData) {
-            localStorage.setItem(
-              "user",
-              JSON.stringify({
-                displayName: backendData.name,
-                email: backendData.email,
-                photoURL: backendData.picture,
-                uid: backendData.uid,
-                roles: backendData.roles,
-              })
-            );
-            window.location.href = "/welcome";
-          }
-        } else {
-          console.warn("Redirect backend returned", resp.status, await resp.text());
+        if (!resp.ok) {
+          console.warn("⚠️ Réponse non OK du backend :", resp.status);
+          throw new Error(`Backend non joignable : ${resp.status}`);
         }
-      } catch (err) {
-        console.debug("No redirect result or redirect handling failed:", err);
+
+        const backendData = await resp.json();
+        console.log("Réponse backend :", backendData);
+
+        localStorage.setItem("user",
+          JSON.stringify({
+            displayName: backendData.name,
+            email: backendData.email,
+            photoURL: backendData.picture,
+            uid: backendData.uid,
+            roles: backendData.roles,
+          })
+        );
+    } catch (error : unknown) {
+        console.warn("⚠️ Backend non joignable ou erreur /api/auth/me :", error);
       }
-    };
-
-    handleRedirect();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
+      navigate("/welcome");
+    }catch(error: unknown) {
+      if (error instanceof FirebaseError) {
+        console.error("❌ Erreur Firebase Microsoft Login :", error);
+        alert("Erreur Firebase : " + error.message);
+        
+        switch (error.code) {
+          case 'auth/popup-closed-by-user':
+            console.warn("L'utilisateur a fermé la fenêtre popup avant de terminer la connexion.");
+            break;
+          case 'auth/cancelled-popup-request':
+            console.warn("Une autre demande de popup est déjà en cours.");
+            break;
+          default:
+            console.error("Erreur Firebase inconnue :", error);
+        }
+      } else if(error instanceof Error){
+        console.error("❌ Erreur inconnue Microsoft Login :", error);
+      } else {
+        if (error instanceof FirebaseError) {
+          console.error("❌ Erreur Firebase Microsoft Login :", error);
+          alert("Erreur Firebase : " + error.message);
+          return;
+      }
+        console.warn("⚠️ Backend non joignable ou erreur /api/auth/me :", error);
+      } 
+    } finally {
+      setLoadingMicrosoft(false);
+    }
+  };
 
   return (
     <div className="min-h-screen gradient-soft flex items-center justify-center p-4">
@@ -239,6 +270,26 @@ export default function Auth() {
                 </>
               )}
             </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full flex items-center justify-center gap-2 rounded-lg"
+              onClick={handleMicrosoftLogin}
+              disabled={loadingMicrosoft}
+            >
+              {loadingMicrosoft ? (
+                "Connexion en cours..."
+              ) : (
+                <>
+                  <img
+                    src="https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg"
+                    alt="Microsoft logo"
+                    className="w-5 h-5"
+                  />
+                  <span>Continuer avec Microsoft</span>
+                </>
+              )}
+            </Button>
           </CardContent>
         </Card>
 
@@ -251,7 +302,9 @@ export default function Auth() {
             </p>
           </CardContent>
         </Card>
+        
       </div>
     </div>
   );
+
 }
