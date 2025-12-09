@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
@@ -27,6 +27,8 @@ export default function Auth() {
   const [loadingGoogle, setLoadingGoogle] = useState(false);
   const [loadingMicrosoft, setLoadingMicrosoft] = useState(false);
   const navigate = useNavigate();
+  const AUTH_BASE = ((import.meta as any).env?.VITE_AUTH_BASE as string) || "";
+  const USE_RELATIVE = ((import.meta as any).env?.VITE_USE_RELATIVE_API as string) === "true";
 
     const callBackendAndStoreUser = async (idToken: string) => {
     try {
@@ -69,8 +71,15 @@ export default function Auth() {
 
       try {
         const idToken = await user.getIdToken();
-        const resp = await fetch("http://localhost:8080/api/auth/me", {
+        console.debug(
+          "Firebase idToken (prefix):",
+          `${idToken?.slice?.(0, 20) ?? ""}... len=${idToken?.length ?? 0}`
+        );
+
+        const authUrl = USE_RELATIVE ? "/api/auth/me" : (AUTH_BASE ? `${AUTH_BASE}/api/auth/me` : "/api/auth/me");
+        const resp = await fetch(authUrl, {
           headers: { Authorization: `Bearer ${idToken}` },
+          credentials: "include",
         });
         // On parse la réponse JSON du backend
         const backendData = await resp.json();
@@ -86,8 +95,56 @@ export default function Auth() {
           })
         );
 
-        // 4. Redirection vers la page de bienvenue
-        navigate("/welcome");
+        console.debug("/api/auth/me status:", resp.status);
+        const text = await resp.text();
+        if (!resp.ok) {
+          console.warn("Backend /api/auth/me returned", resp.status, text);
+          if (resp.status === 401) {
+            alert("Authentification refusée (401). Le backend a rejeté le token.");
+          }
+          let backendData: any = null;
+          try {
+            backendData = text ? JSON.parse(text) : null;
+          } catch (parseErr) {
+            console.warn("Impossible d'analyser la réponse backend en JSON:", parseErr);
+          }
+          if (backendData) {
+            localStorage.setItem(
+              "user",
+              JSON.stringify({
+                displayName: backendData.name,
+                email: backendData.email,
+                photoURL: backendData.picture,
+                uid: backendData.uid,
+                roles: backendData.roles,
+              })
+            );
+            navigate("/welcome");
+          }
+        } else {
+          let backendData: any = null;
+          try {
+            backendData = text ? JSON.parse(text) : null;
+          } catch (parseErr) {
+            console.warn("Failed to parse JSON from backend (OK response):", parseErr);
+          }
+          if (backendData) {
+            console.log("Réponse backend :", backendData);
+            localStorage.setItem(
+              "user",
+              JSON.stringify({
+                displayName: backendData.name,
+                email: backendData.email,
+                photoURL: backendData.picture,
+                uid: backendData.uid,
+                roles: backendData.roles,
+              })
+            );
+            navigate("/welcome");
+          } else {
+            console.warn("Backend returned empty or non-JSON body despite 200 OK");
+          }
+        }
       } catch (backendError) {
         console.warn("⚠️ Backend non joignable :", backendError);
       }
