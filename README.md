@@ -19,55 +19,244 @@ If you are developing a production application, we recommend updating the config
 export default defineConfig([
   globalIgnores(['dist']),
   {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+    # LittleBook — Frontend
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+    Ce dossier contient l'application frontend de LittleBook, basée sur React + Vite + TypeScript et stylée avec Tailwind CSS.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+    Résumé rapide
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+    - Vite (dev server, build, preview)
+    - React 18 + TypeScript
+    - Tailwind CSS + utilitaires shadcn/ui et primitives Radix
+    - React Router pour le routage
+    - TanStack Query pour la gestion des requêtes
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+    ## Prérequis
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+    - Node.js (version LTS recommandée, ex. 18 ou 20)
+    - npm (ou pnpm si vous préférez)
+
+    Vérifiez vos versions :
+
+    ```bash
+    node -v
+    npm -v
+    ```
+
+    ## Installation
+
+    1. Clonez le dépôt (ou placez-vous dans le dossier `LittleBook_Front` si déjà présent) :
+
+    ```bash
+    git clone <url-du-repo>
+    cd LittleBook_Front
+    ```
+
+    2. Installez les dépendances :
+
+    ```bash
+    npm install
+    # ou
+    # pnpm install
+    ```
+
+    ## Scripts disponibles
+
+    Les scripts définis dans `package.json` sont :
+
+    - `npm run dev` — démarre le serveur de développement Vite avec HMR.
+    - `npm run build` — construit l'application pour la production (dossier `dist`).
+    - `npm run build:dev` — construit en mode `development` (optionnel).
+    - `npm run preview` — prévisualise localement le build de production (après `build`).
+    - `npm run lint` — lance ESLint sur l'ensemble du projet.
+
+    Exemples d'utilisation :
+
+    ```bash
+    npm run dev
+    npm run build
+    npm run preview
+    npm run lint
+    ```
+
+    ## Variables d'environnement
+
+    Si le projet communique avec une API ou utilise des services (Firebase, etc.), créez un fichier `.env` à la racine de `LittleBook_Front/` et ajoutez vos variables. Les variables destinées au code client doivent commencer par `VITE_` (ex. `VITE_API_BASE_URL`, `VITE_FIREBASE_API_KEY`).
+
+    Exemple minimal :
+
+    ```
+    VITE_API_BASE_URL=https://api.example.com
+    VITE_FIREBASE_API_KEY=clef_de_test
+    ```
+
+    ## Structure du projet
+
+    - `src/`
+      # LittleBook — Frontend
+
+      Ce dossier contient le frontend de LittleBook : une application React + TypeScript construite avec Vite, stylée avec Tailwind CSS et utilisant des primitives Radix / shadcn/ui.
+
+      Table des matières
+
+      - [Prérequis](#prérequis)
+      - [Installation](#installation)
+      - [Scripts disponibles](#scripts-disponibles)
+      - [Variables d'environnement](#variables-denvironnement)
+      - [Développement local](#développement-local)
+      - [Build & Déploiement](#build--déploiement)
+      - [CI (exemple GitHub Actions)](#ci-exemple-github-actions)
+      - [Structure du projet](#structure-du-projet)
+      - [Linting & Typecheck](#linting--typecheck)
+      - [Dépannage](#dépannage)
+      - [Contribution](#contribution)
+      - [Contacts & support](#contacts--support)
+
+      ## Prérequis
+
+      - Node.js (version LTS recommandée, ex. 18 ou 20)
+      - npm (ou pnpm)
+      - Git
+
+      Vérifiez vos versions :
+
+      ```bash
+      node -v
+      npm -v
+      ```
+
+      ## Installation
+
+      1. Clonez le dépôt ou rendez-vous dans le dossier `LittleBook_Front` :
+
+      ```bash
+      git clone <url-du-repo>
+      cd LittleBook_Front
+      ```
+
+      2. Installez les dépendances :
+
+      ```bash
+      npm install
+      # ou
+      # pnpm install
+      ```
+
+      3. (Optionnel) Créez un fichier `.env` à la racine pour vos variables d'environnement (voir section suivante).
+
+      ## Scripts disponibles
+
+      Les scripts présents dans `package.json` :
+
+      - `npm run dev` — démarrage du serveur de développement Vite (HMR).
+      - `npm run build` — build pour la production (dossier `dist`).
+      - `npm run build:dev` — build en mode `development` (utile pour tests locaux spécifiques).
+      - `npm run preview` — prévisualiser localement le contenu du build (`dist`).
+      - `npm run lint` — lance ESLint sur le projet.
+
+      Exemples :
+
+      ```bash
+      npm run dev      # développement
+      npm run build    # build production
+      npm run preview  # preview du build
+      npm run lint     # analyse ESLint
+      ```
+
+      Si vous utilisez pnpm, remplacez `npm run` par `pnpm` :
+
+      ```bash
+      pnpm dev
+      pnpm build
+      pnpm preview
+      pnpm lint
+      ```
+
+      ## Variables d'environnement
+
+      Les variables destinées au client doivent commencer par `VITE_`. Exemples courants :
+
+      ```
+      VITE_API_BASE_URL=https://api.example.com
+      VITE_FIREBASE_API_KEY=your_firebase_api_key
+      VITE_GOOGLE_ANALYTICS_ID=G-XXXXXXX
+      ```
+
+      Placez les clés réelles dans un fichier `.env` (ne pas committer). Pour la production, configurez les variables dans la plateforme d'hébergement (Vercel, Netlify, etc.).
+
+      ## Développement local
+
+      Démarrer le serveur de développement :
+
+      ```bash
+      npm run dev
+      ```
+
+      Le site sera disponible par défaut sur http://localhost:5173 (Vite). Si le port est occupé, Vite proposera un autre port.
+
+      Pour prévisualiser le build produit :
+
+      ```bash
+      npm run build
+      npm run preview
+      ```
+
+      ## Build & Déploiement
+
+      1. Build production :
+
+      ```bash
+      npm run build
+      ```
+
+      2. Déploiement :
+      - Netlify : configurez la commande de build `npm run build` et le dossier `dist` comme répertoire de publication.
+
+
+      ## Structure du projet (aperçu)
+
+      - `index.html` — template HTML
+      - `src/`
+        - `main.tsx` — point d'entrée
+        - `App.tsx` — routeur & layout
+        - `pages/` — pages (Auth, Home, Profile, Welcome, NotFound)
+        - `components/` — composants réutilisables (dossier `ui/` pour primitives)
+        - `hooks/` — hooks personnalisés
+        - `lib/` — utilitaires
+        - `assets/` — images et ressources
+
+      ## Linting & Typecheck
+
+      - Lint :
+
+      ```bash
+      npm run lint
+      ```
+
+      - Typecheck (TypeScript) :
+
+      ```bash
+      npx tsc --noEmit
+      ```
+
+      Pensez à intégrer ces vérifications dans votre pipeline CI.
+
+      ## Dépannage
+
+      - Port déjà utilisé : Vite proposera un port alternatif. Fermez le processus occupant ou changez le port.
+      - Variables manquantes : vérifiez votre `.env` et que les variables `VITE_` sont définies en production.
+      - Erreurs de build : lancer `npm run build` localement pour voir les messages et corriger les erreurs TS/ESLint.
+
+      ## Contribution
+
+      1. Fork
+      2. Branche feature/bugfix
+      3. Commit clair et PR
+
+      Conseils : ajoutez des tests et vérifiez `npm run lint` avant d'ouvrir la PR.
+
+      ## Contacts & support
+
+      Ouvrez une issue sur le dépôt principal pour les bugs ou les questions. Mentionnez le contexte (branch, commit, étapes pour reproduire).
+
+ 
