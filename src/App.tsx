@@ -10,6 +10,7 @@ import Profile from "./pages/Profile";
 import Auth from "./pages/Auth";
 import Welcome from "./pages/Welcome";
 import NotFound from "./pages/NotFound";
+import Collection from "./pages/Collection";
 import Admin from "./pages/Admin";
 import Books from "./pages/Books";
 
@@ -56,6 +57,11 @@ const App = () => (
               </PrivateRoute>
             }
           />
+           <Route path="/collection" element={
+            <Layout>
+              <Collection />
+            </Layout>
+          } />
 
           {/* Page d'administration (protégée) */}
           <Route
