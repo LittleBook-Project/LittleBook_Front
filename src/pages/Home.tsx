@@ -1,56 +1,51 @@
 import { BookCard } from "@/components/BookCard";
 import { HeroSection } from "@/components/HeroSection";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { TrendingUp, Users, BookOpen } from "lucide-react";
 
-// Mock data pour les livres populaires
-const popularBooks = [
-  {
-    id: "1",
-    title: "L'Étranger",
-    author: "Albert Camus",
-    coverImage: "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=300&h=400&fit=crop",
-    rating: 5,  
-    category: "Classique",
-    review: "Une œuvre incontournable qui questionne l'absurdité de la condition humaine.",
-    likes: 124,
-    comments: 32,
-    isLiked: true,
-    userName: "Marie Dubois",
-    userAvatar: "https://images.unsplash.com/photo-1494790108755-2616b612e7d4?w=50&h=50&fit=crop&crop=face"
-  },
-  {
-    id: "2",
-    title: "1984",
-    author: "George Orwell",
-    coverImage: "https://images.unsplash.com/photo-1589829085413-56de8ae18c73?w=300&h=400&fit=crop",
-    rating: 4,
-    category: "Dystopie",
-    review: "Prophétique et troublant. Plus actuel que jamais.",
-    likes: 89,
-    comments: 18,
-    isLiked: false,
-    userName: "Paul Martin",
-    userAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=50&h=50&fit=crop&crop=face"
-  },
-  {
-    id: "3",
-    title: "Le Petit Prince",
-    author: "Antoine de Saint-Exupéry",
-    coverImage: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=300&h=400&fit=crop",
-    rating: 5,
-    category: "Jeunesse",
-    review: "Un conte philosophique touchant qui parle à tous les âges.",
-    likes: 156,
-    comments: 45,
-    isLiked: true,
-    userName: "Sophie Laurent",
-    userAvatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=50&h=50&fit=crop&crop=face"
-  }
-];
+interface Book {
+  id: string;
+  title: string;
+  subtitle?: string;
+  authors: string;
+  isbn13?: string;
+  isbn10?: string;
+  coverUrl?: string;
+  publishYear?: number;
+  subjects?: string;
+  description?: string;
+}
 
 export default function Home() {
+  const navigate = useNavigate();
+
+  // Récupérer les livres depuis la DB
+  const { data: booksData, isLoading } = useQuery({
+    queryKey: ["books"],
+    queryFn: async () => {
+      const res = await fetch("/books?page=0&size=6");
+      if (!res.ok) throw new Error("Erreur lors du chargement des livres");
+      return res.json();
+    },
+  });
+
+  const books = booksData?.content || [];
+
+  // Convertir les livres DB en format BookCard
+  const convertToBookCard = (book: Book) => ({
+    id: book.id,
+    title: book.title,
+    author: book.authors || "Auteur inconnu",
+    coverImage: book.coverUrl || "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=300&h=400&fit=crop",
+    rating: 4,
+    category: book.subjects?.split(",")[0] || "Général",
+    review: book.description || book.subtitle || "Un livre passionnant à découvrir.",
+    likes: 0,
+    comments: 0,
+    isLiked: false,
+  });
+
   return (
     <div className="min-h-screen">
       <HeroSection />
@@ -110,23 +105,41 @@ export default function Home() {
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h2 className="text-3xl font-bold mb-2">Tendances de la communauté</h2>
-              <p className="text-muted-foreground">Les livres les plus appréciés cette semaine</p>
+              <h2 className="text-3xl font-bold mb-2">Livres de notre bibliothèque</h2>
+              <p className="text-muted-foreground">Découvrez les livres disponibles</p>
             </div>
-            <Button variant="outline" className="rounded-full">
+            <Button 
+              variant="outline" 
+              className="rounded-full"
+              onClick={() => navigate("/books")}
+            >
               Voir tout
             </Button>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {popularBooks.map((book) => (
-              <BookCard 
-                key={book.id} 
-                {...book} 
-                className="animate-fade-in"
-              />
-            ))}
-          </div>
+          {isLoading ? (
+            <div className="flex justify-center items-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+          ) : books.length > 0 ? (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {books.map((book: Book) => (
+                <BookCard 
+                  key={book.id} 
+                  {...convertToBookCard(book)} 
+                  className="animate-fade-in"
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500 text-lg mb-4">Aucun livre dans la bibliothèque</p>
+              <Button onClick={() => navigate("/books")}>
+                Ajouter des livres
+              </Button>
+            </div>
+          )}
         </div>
       </section>
     </div>

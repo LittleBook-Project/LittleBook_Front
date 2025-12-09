@@ -1,4 +1,4 @@
-import { Search, Bell, BookOpen, User, Plus, Heart, Home } from "lucide-react";
+import { Search, Bell, BookOpen, User, Plus, Heart, Home, Library } from "lucide-react";
 import { Button } from "./button";
 import { Input } from "./input";
 import { Badge } from "./badge";
@@ -41,6 +41,17 @@ export const Navbar = () => {
             >
               <Home className="h-4 w-4 mr-2" />
               Accueil
+            </Button>
+          </Link>
+          
+          <Link to="/books">
+            <Button 
+              variant={isActive("/books") ? "default" : "ghost"} 
+              size="sm" 
+              className="rounded-full"
+            >
+              <Library className="h-4 w-4 mr-2" />
+              Livres
             </Button>
           </Link>
           

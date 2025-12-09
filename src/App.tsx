@@ -10,6 +10,9 @@ import Profile from "./pages/Profile";
 import Auth from "./pages/Auth";
 import Welcome from "./pages/Welcome";
 import NotFound from "./pages/NotFound";
+import Collection from "./pages/Collection";
+import Admin from "./pages/Admin";
+import Books from "./pages/Books";
 
 const queryClient = new QueryClient();
 
@@ -50,6 +53,35 @@ const App = () => (
               <PrivateRoute>
                 <Layout>
                   <Profile />
+                </Layout>
+              </PrivateRoute>
+            }
+          />
+           <Route path="/collection" element={
+            <Layout>
+              <Collection />
+            </Layout>
+          } />
+
+          {/* Page d'administration (protégée) */}
+          <Route
+            path="/admin"
+            element={
+              <PrivateRoute>
+                <Layout>
+                  <Admin />
+                </Layout>
+              </PrivateRoute>
+            }
+          />
+
+          {/* Page de gestion des livres (protégée) */}
+          <Route
+            path="/books"
+            element={
+              <PrivateRoute>
+                <Layout>
+                  <Books />
                 </Layout>
               </PrivateRoute>
             }
