@@ -11,3 +11,9 @@ services:
     environment:
       - NODE_ENV=production
     restart: unless-stopped
+    networks:
+      - littlebook-network
+
+networks:
+  littlebook-network:
+    external: true

@@ -1,103 +1,295 @@
-# React + TypeScript + Vite
+# 📘 LittleBook — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Application frontend de LittleBook : une plateforme moderne de partage de livres construite avec React + TypeScript + Vite, stylée avec Tailwind CSS.
 
-Currently, two official plugins are available:
+## 🎯 Fonctionnalités
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- ✅ **Authentification** via Firebase (Google)
+- ✅ **Recherche de livres** dans OpenLibrary
+- ✅ **Gestion de collection** personnelle
+- ✅ **Système d'avis** avec notes et commentaires
+- ✅ **Interface responsive** et moderne
+- ✅ **Profil utilisateur** personnalisable
+- ✅ **Dashboard admin** avec statistiques
 
-## React Compiler
+## 🚀 Stack Technique
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **React 18** + **TypeScript**
+- **Vite** (Build tool & dev server)
+- **Tailwind CSS** (Styles)
+- **shadcn/ui** + **Radix UI** (Composants)
+- **TanStack Query** (Gestion requêtes API)
+- **React Router** (Navigation)
+- **Lucide React** (Icônes)
 
-## Expanding the ESLint configuration
+## 📦 Installation
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Prérequis
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    # LittleBook — Frontend
+- Node.js >= 18 (LTS recommandé)
+- npm ou pnpm
 
-    Ce dossier contient l'application frontend de LittleBook, basée sur React + Vite + TypeScript et stylée avec Tailwind CSS.
+```bash
+node -v  # Vérifier la version
+npm -v
+```
 
-    Résumé rapide
+### Installation des dépendances
 
-    - Vite (dev server, build, preview)
-    - React 18 + TypeScript
-    - Tailwind CSS + utilitaires shadcn/ui et primitives Radix
-    - React Router pour le routage
-    - TanStack Query pour la gestion des requêtes
+```bash
+cd LittleBook_Front
+npm install
+```
 
-    ## Prérequis
+## 🔧 Configuration
 
-    - Node.js (version LTS recommandée, ex. 18 ou 20)
-    - npm (ou pnpm si vous préférez)
+Créez un fichier `.env` à la racine :
 
-    Vérifiez vos versions :
+```env
+VITE_API_BASE_URL=http://localhost:8080/api
+VITE_FIREBASE_API_KEY=your_firebase_key
+VITE_FIREBASE_AUTH_DOMAIN=littlebook-b2d2d.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=littlebook-b2d2d
+```
 
-    ```bash
-    node -v
-    npm -v
-    ```
+> **Note**: Les variables doivent commencer par `VITE_` pour être accessibles dans le code.
 
-    ## Installation
+## 🛠️ Scripts disponibles
+## 🚀 Démarrage simple (Docker Compose)
 
-    1. Clonez le dépôt (ou placez-vous dans le dossier `LittleBook_Front` si déjà présent) :
+Depuis la racine de `LittleBook_Front/` (où se trouve le `docker-compose.yml`) :
 
-    ```bash
-    git clone <url-du-repo>
-    cd LittleBook_Front
-    ```
+```bash
+docker compose up -d
+```
 
-    2. Installez les dépendances :
+Arrêter et supprimer les conteneurs :
 
-    ```bash
-    npm install
-    # ou
-    # pnpm install
-    ```
+```bash
+docker compose down
+```
 
-    ## Scripts disponibles
+Rebuild après modifications :
 
-    Les scripts définis dans `package.json` sont :
+```bash
+docker compose build frontend
+docker compose up -d frontend
+```
 
-    - `npm run dev` — démarre le serveur de développement Vite avec HMR.
-    - `npm run build` — construit l'application pour la production (dossier `dist`).
-    - `npm run build:dev` — construit en mode `development` (optionnel).
-    - `npm run preview` — prévisualise localement le build de production (après `build`).
-    - `npm run lint` — lance ESLint sur l'ensemble du projet.
 
-    Exemples d'utilisation :
+```bash
+# Démarrage développement (avec HMR)
+npm run dev
 
-    ```bash
-    npm run dev
-    npm run build
-    npm run preview
-    npm run lint
-    ```
+# Build production
+npm run build
 
-    ## Variables d'environnement
+# Build développement
+npm run build:dev
 
-    Si le projet communique avec une API ou utilise des services (Firebase, etc.), créez un fichier `.env` à la racine de `LittleBook_Front/` et ajoutez vos variables. Les variables destinées au code client doivent commencer par `VITE_` (ex. `VITE_API_BASE_URL`, `VITE_FIREBASE_API_KEY`).
+# Prévisualiser le build
+npm run preview
 
-    Exemple minimal :
+# Linter
+npm run lint
 
-    ```
-    VITE_API_BASE_URL=https://api.example.com
-    VITE_FIREBASE_API_KEY=clef_de_test
-    ```
+# Tests (si configurés)
+npm run test
+```
 
-    ## Structure du projet
+## 🏗️ Structure du projet
 
-    - `src/`
-      # LittleBook — Frontend
+```
+LittleBook_Front/
+├── public/              # Assets statiques
+├── src/
+│   ├── assets/         # Images, fonts, etc.
+│   ├── components/     # Composants React
+│   │   ├── ui/        # Composants UI shadcn/ui
+│   │   ├── Layout.tsx
+│   │   └── ...
+│   ├── hooks/         # Custom hooks
+│   ├── lib/           # Utilitaires et configuration
+│   │   └── api.ts     # Client API
+│   ├── pages/         # Pages de l'application
+│   │   ├── UnifiedBooks.tsx  # Page principale (recherche + collection + reviews)
+│   │   ├── Admin.tsx
+│   │   ├── Profile.tsx
+│   │   └── ...
+│   ├── types/         # Types TypeScript
+│   │   ├── book.ts
+│   │   ├── review.ts
+│   │   └── ...
+│   ├── App.tsx        # Composant racine + routing
+│   ├── main.tsx       # Point d'entrée
+│   └── index.css      # Styles globaux
+├── .env               # Variables d'environnement (ignoré par Git)
+├── docker-compose.yml # Configuration Docker
+├── Dockerfile         # Image Docker frontend
+├── nginx.conf         # Configuration Nginx
+├── package.json
+├── tailwind.config.ts
+├── tsconfig.json
+└── vite.config.ts
+```
 
-      Ce dossier contient le frontend de LittleBook : une application React + TypeScript construite avec Vite, stylée avec Tailwind CSS et utilisant des primitives Radix / shadcn/ui.
+## 🐳 Docker
 
-      Table des matières
+### Build de l'image
+
+```bash
+docker compose build frontend
+```
+
+### Lancement du conteneur
+
+```bash
+docker compose up -d frontend
+```
+
+Le frontend sera accessible sur [http://localhost:3000](http://localhost:3000)
+
+### Rebuild après modifications
+
+```bash
+docker compose build frontend
+docker compose up -d frontend
+```
+
+## 🌐 Routes disponibles
+
+| Route | Description | Protection |
+|-------|-------------|------------|
+| `/` | Page d'accueil (landing ou dashboard) | Public |
+| `/auth` | Authentification | Public |
+| `/home` | Dashboard principal | Privée |
+| `/profile` | Profil utilisateur | Privée |
+| `/admin` | Administration | Privée |
+| `*` | 404 Not Found | Public |
+
+## 🔌 Intégration API
+
+Le frontend communique avec le backend via le **Gateway** sur le port **8080**.
+
+### Configuration du client API
+
+Voir [src/lib/api.ts](src/lib/api.ts) pour la configuration du client HTTP.
+
+```typescript
+// Exemple d'appel API
+import { apiFetch } from "@/lib/api";
+
+const books = await apiFetch<Book[]>("/book?page=0&size=20");
+```
+
+### Endpoints principaux
+
+- `GET /api/book` - Liste des livres
+- `GET /api/book/search-openlibrary` - Recherche OpenLibrary
+- `POST /api/book/add-from-openlibrary` - Ajouter un livre
+- `GET /api/review/book/{isbn}` - Reviews par ISBN
+- `GET /api/review/book-id/{bookId}` - Reviews par ID
+- `POST /api/review` - Créer une review
+- `POST /api/auth/login` - Connexion
+- `GET /api/user/profile` - Profil utilisateur
+
+## 🎨 Personnalisation des styles
+
+### Tailwind CSS
+
+Les couleurs et thèmes sont configurés dans [tailwind.config.ts](tailwind.config.ts).
+
+### Composants UI
+
+Les composants shadcn/ui sont dans `src/components/ui/` et peuvent être personnalisés.
+
+```bash
+# Ajouter un nouveau composant shadcn
+npx shadcn-ui@latest add [component-name]
+```
+
+## 🧪 Tests
+
+```bash
+# Tests unitaires
+npm run test
+
+# Tests avec couverture
+npm run test:coverage
+
+# Tests en mode watch
+npm run test:watch
+```
+
+## 📱 Responsive Design
+
+L'interface est entièrement responsive avec breakpoints Tailwind :
+
+- `sm`: 640px
+- `md`: 768px
+- `lg`: 1024px
+- `xl`: 1280px
+- `2xl`: 1536px
+
+## 🐛 Dépannage
+
+### Le dev server ne démarre pas
+
+```bash
+# Nettoyer le cache
+rm -rf node_modules package-lock.json
+npm install
+```
+
+### Erreur de connexion API
+
+- Vérifiez que le gateway est démarré : `http://localhost:8080/api/book/health`
+- Vérifiez la variable `VITE_API_BASE_URL` dans `.env`
+- Consultez la console navigateur (F12)
+
+### Build Docker échoue
+
+```bash
+# Build avec logs détaillés
+docker compose build --no-cache frontend
+
+# Vérifier les logs
+docker compose logs frontend
+```
+
+### Erreur TypeScript
+
+```bash
+# Vérifier les types
+npm run type-check
+
+# Rebuild
+npm run build
+```
+
+## 📚 Ressources
+
+- [React Documentation](https://react.dev/)
+- [Vite Guide](https://vitejs.dev/guide/)
+- [Tailwind CSS](https://tailwindcss.com/docs)
+- [shadcn/ui](https://ui.shadcn.com/)
+- [TanStack Query](https://tanstack.com/query/latest)
+
+## 🤝 Contribution
+
+1. Suivre les conventions de code (ESLint + Prettier)
+2. Créer une branche feature
+3. Tester localement avant de commit
+4. Ouvrir une Pull Request avec description claire
+
+## 📄 Licence
+
+Voir [LICENSE](../LICENSE) à la racine du projet.
+
+---
+
+**Développé avec ❤️ par l'équipe LittleBook**
+
 
       - [Prérequis](#prérequis)
       - [Installation](#installation)

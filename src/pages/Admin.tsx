@@ -49,13 +49,15 @@ const Admin = () => {
 
   const adminUrl = (path: string) => {
     // path should start with '/'
-    if (USE_RELATIVE) return path;
-    return ADMIN_BASE ? `${ADMIN_BASE}${path}` : path;
+    const fullPath = `/api${path}`;
+    if (USE_RELATIVE) return fullPath;
+    return ADMIN_BASE ? `${ADMIN_BASE}${fullPath}` : fullPath;
   };
 
   const userUrl = (path: string) => {
-    if (USE_RELATIVE) return path;
-    return USER_BASE ? `${USER_BASE}${path}` : path;
+    const fullPath = `/api${path}`;
+    if (USE_RELATIVE) return fullPath;
+    return USER_BASE ? `${USER_BASE}${fullPath}` : fullPath;
   };
 
   useEffect(() => {
@@ -65,10 +67,10 @@ const Admin = () => {
       setError(null);
       try {
         const [usersRes, loginEventsRes, reviewsRes, summaryRes] = await Promise.all([
-          fetch(adminUrl('/api/stats/users')),
-          fetch(adminUrl('/api/stats/login-events')),
-          fetch(adminUrl('/api/stats/reviews')),
-          fetch(adminUrl('/api/stats/summary')),
+          fetch(adminUrl('/stats/users')),
+          fetch(adminUrl('/stats/login-events')),
+          fetch(adminUrl('/stats/reviews')),
+          fetch(adminUrl('/stats/summary')),
         ]);
 
         // Vérification des réponses
