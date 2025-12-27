@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Layout } from "./components/Layout";
 
+import Landing from "./pages/Landing";
 import Home from "./pages/Home";
 import Profile from "./pages/Profile";
 import Auth from "./pages/Auth";
@@ -13,6 +14,8 @@ import NotFound from "./pages/NotFound";
 import Collection from "./pages/Collection";
 import Admin from "./pages/Admin";
 import Books from "./pages/Books";
+import BooksGrid from "./pages/BooksGrid";
+import UnifiedBooks from "./pages/UnifiedBooks";
 
 const queryClient = new QueryClient();
 
@@ -24,6 +27,20 @@ const PrivateRoute = ({ children }: { children: JSX.Element }) => {
   return user ? children : <Navigate to="/auth" replace />;
 };
 
+/**
+ * 🏠 Route publique : affiche Landing si non connecté, Dashboard si connecté
+ */
+const PublicRoute = () => {
+  const user = localStorage.getItem("user");
+  return user ? (
+    <Layout>
+      <UnifiedBooks />
+    </Layout>
+  ) : (
+    <Landing />
+  );
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -31,16 +48,19 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
+          {/* Page d'accueil publique */}
+          <Route path="/" element={<PublicRoute />} />
+
           {/* Authentification */}
           <Route path="/auth" element={<Auth />} />
 
-          {/* Page d'accueil protégée */}
+          {/* Page d'accueil privée */}
           <Route
-            path="/"
+            path="/home"
             element={
               <PrivateRoute>
                 <Layout>
-                  <Home />
+                  <UnifiedBooks />
                 </Layout>
               </PrivateRoute>
             }
@@ -82,6 +102,18 @@ const App = () => (
               <PrivateRoute>
                 <Layout>
                   <Books />
+                </Layout>
+              </PrivateRoute>
+            }
+          />
+
+          {/* Grille de tous les livres (protégée) */}
+          <Route
+            path="/books-grid"
+            element={
+              <PrivateRoute>
+                <Layout>
+                  <BooksGrid />
                 </Layout>
               </PrivateRoute>
             }

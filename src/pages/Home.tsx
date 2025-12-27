@@ -1,8 +1,13 @@
-import { BookCard } from "@/components/BookCard";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { BookFlashcard } from "@/components/BookFlashcard";
+import { ReviewModal } from "@/components/ReviewModal";
 import { HeroSection } from "@/components/HeroSection";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { TrendingUp, Users, BookOpen } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { TrendingUp, Users, BookOpen, Loader2, Search } from "lucide-react";
 
 interface Book {
   id: string;
@@ -17,34 +22,127 @@ interface Book {
   description?: string;
 }
 
+interface Review {
+  id: string;
+  rating: number;
+  description: string;
+  userName?: string;
+}
+
+interface BookWithReviews extends Book {
+  reviews: Review[];
+  currentUserReview?: {
+    id: string;
+    rating: number;
+    description: string;
+  };
+}
+
 export default function Home() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filteredBooks, setFilteredBooks] = useState<BookWithReviews[]>([]);
+  const [reviewModal, setReviewModal] = useState<{
+    isOpen: boolean;
+    bookId?: string;
+    book?: BookWithReviews;
+  }>({ isOpen: false });
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
   // Récupérer les livres depuis la DB
   const { data: booksData, isLoading } = useQuery({
-    queryKey: ["books"],
+    queryKey: ["books-home"],
     queryFn: async () => {
-      const res = await fetch("/books?page=0&size=6");
+      const res = await fetch("/api/book?page=0&size=20");
       if (!res.ok) throw new Error("Erreur lors du chargement des livres");
       return res.json();
     },
   });
 
-  const books = booksData?.content || [];
+  const books: BookWithReviews[] = booksData?.content || [];
 
-  // Convertir les livres DB en format BookCard
-  const convertToBookCard = (book: Book) => ({
-    id: book.id,
-    title: book.title,
-    author: book.authors || "Auteur inconnu",
-    coverImage: book.coverUrl || "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=300&h=400&fit=crop",
-    rating: 4,
-    category: book.subjects?.split(",")[0] || "Général",
-    review: book.description || book.subtitle || "Un livre passionnant à découvrir.",
-    likes: 0,
-    comments: 0,
-    isLiked: false,
-  });
+  // Charger les reviews pour chaque livre
+  useEffect(() => {
+    if (books.length === 0) return;
+
+    const loadReviews = async () => {
+      const booksWithReviews = await Promise.all(
+        books.map(async (book) => {
+          try {
+            const res = await fetch(`/api/review/book/${book.isbn13}`);
+            const reviews = res.ok ? await res.json() : [];
+            return {
+              ...book,
+              reviews: reviews || [],
+              currentUserReview: undefined, // TODO: charger la review de l'utilisateur courant
+            };
+          } catch (error) {
+            console.error(`Erreur loading reviews for ${book.title}:`, error);
+            return { ...book, reviews: [] };
+          }
+        })
+      );
+      setFilteredBooks(booksWithReviews);
+    };
+
+    loadReviews();
+  }, [books]);
+
+  // Filtrer les livres par recherche
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setFilteredBooks(books);
+      return;
+    }
+
+    const lowerSearch = searchTerm.toLowerCase();
+    const filtered = books.filter(
+      (book) =>
+        book.title.toLowerCase().includes(lowerSearch) ||
+        book.authors.toLowerCase().includes(lowerSearch) ||
+        book.subjects?.toLowerCase().includes(lowerSearch)
+    );
+    setFilteredBooks(filtered);
+  }, [searchTerm, books]);
+
+  const handleAddReview = (book: BookWithReviews) => {
+    setReviewModal({
+      isOpen: true,
+      bookId: book.id,
+      book,
+    });
+  };
+
+  const handleSubmitReview = async (rating: number, description: string) => {
+    if (!reviewModal.book?.isbn13) return;
+
+    setIsSubmittingReview(true);
+    try {
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      const res = await fetch("/api/review", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userUuid: user.id || user.uuid,
+          bookIsbn: reviewModal.book.isbn13,
+          description,
+          rating,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Erreur lors de la création de la review");
+      
+      // Invalider le cache pour forcer le rechargement
+      queryClient.invalidateQueries({ queryKey: ["books-home"] });
+      setReviewModal({ isOpen: false });
+    } catch (error) {
+      console.error("Erreur:", error);
+      alert("Erreur lors de l'ajout de la review");
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  };
 
   return (
     <div className="min-h-screen">
@@ -111,37 +209,64 @@ export default function Home() {
             <Button 
               variant="outline" 
               className="rounded-full"
-              onClick={() => navigate("/books")}
+              onClick={() => navigate("/books-grid")}
             >
               Voir tout
             </Button>
           </div>
 
+          {/* Search Bar */}
+          <div className="mb-8 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              placeholder="Chercher un livre par titre, auteur ou catégorie..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 h-11"
+            />
+          </div>
+
+          {/* Books Grid */}
           {isLoading ? (
             <div className="flex justify-center items-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
             </div>
-          ) : books.length > 0 ? (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {books.map((book: Book) => (
-                <BookCard 
+          ) : filteredBooks.length > 0 ? (
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {filteredBooks.map((book) => (
+                <BookFlashcard 
                   key={book.id} 
-                  {...convertToBookCard(book)} 
-                  className="animate-fade-in"
+                  {...book}
+                  reviews={book.reviews}
+                  onAddReview={() => handleAddReview(book)}
                 />
               ))}
             </div>
           ) : (
             <div className="text-center py-12">
               <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500 text-lg mb-4">Aucun livre dans la bibliothèque</p>
-              <Button onClick={() => navigate("/books")}>
-                Ajouter des livres
-              </Button>
+              <p className="text-gray-500 text-lg mb-4">
+                {searchTerm ? "Aucun livre ne correspond à votre recherche" : "Aucun livre dans la bibliothèque"}
+              </p>
+              {!searchTerm && (
+                <Button onClick={() => navigate("/books")}>
+                  Ajouter des livres
+                </Button>
+              )}
             </div>
           )}
         </div>
       </section>
+
+      {/* Review Modal */}
+      <ReviewModal
+        isOpen={reviewModal.isOpen}
+        onClose={() => setReviewModal({ isOpen: false })}
+        bookTitle={reviewModal.book?.title || ""}
+        bookIsbn13={reviewModal.book?.isbn13}
+        onSubmit={handleSubmitReview}
+        isLoading={isSubmittingReview}
+      />
     </div>
   );
 }

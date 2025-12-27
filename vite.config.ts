@@ -12,17 +12,7 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": {
-        target: "http://localhost:8082",
-        changeOrigin: true,
-        secure: false,
-      },
-      "/user": {
-        target: "http://localhost:8083",
-        changeOrigin: true,
-        secure: false,
-      },
-      "/books": {
-        target: "http://localhost:8084",
+        target: "http://localhost:8080",
         changeOrigin: true,
         secure: false,
       },

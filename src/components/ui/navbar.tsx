@@ -20,17 +20,6 @@ export const Navbar = () => {
           </span>
         </Link>
 
-        {/* Search Bar */}
-        <div className="flex-1 max-w-md mx-8">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Rechercher un livre, un auteur..." 
-              className="pl-10 bg-muted/50 border-border/50 rounded-full"
-            />
-          </div>
-        </div>
-
         {/* Navigation Items */}
         <div className="flex items-center space-x-2">
           <Link to="/">
@@ -41,28 +30,6 @@ export const Navbar = () => {
             >
               <Home className="h-4 w-4 mr-2" />
               Accueil
-            </Button>
-          </Link>
-          
-          <Link to="/books">
-            <Button 
-              variant={isActive("/books") ? "default" : "ghost"} 
-              size="sm" 
-              className="rounded-full"
-            >
-              <Library className="h-4 w-4 mr-2" />
-              Livres
-            </Button>
-          </Link>
-          
-          <Link to="/collection">
-            <Button 
-              variant={isActive("/collection") ? "default" : "ghost"} 
-              size="sm" 
-              className="rounded-full"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Collection
             </Button>
           </Link>
 

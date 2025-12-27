@@ -5,40 +5,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { apiFetch, Page } from "@/lib/api";
+import { Book } from "@/types/book";
 
-interface Book {
-  id: string;
-  title: string;
-  subtitle?: string;
-  authors: string;
-  isbn13?: string;
-  isbn10?: string;
-  coverUrl?: string;
-  publishYear?: number;
-  subjects?: string;
-  description?: string;
-}
+type SyncBook = Book;
 
-interface OpenLibraryBook {
-  key: string;
-  title: string;
-  author_name?: string[];
-  first_publish_year?: number;
-  isbn?: string[];
-  cover_i?: number;
-  publisher?: string[];
-  subject?: string[];
-}
-
-interface OpenLibraryResponse {
-  numFound: number;
-  docs: OpenLibraryBook[];
-}
+const normalizeIsbn = (value?: string) => value?.replace(/[^0-9Xx]/g, "");
 
 const Books = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [localBooks, setLocalBooks] = useState<Book[]>([]);
-  const [openLibraryBooks, setOpenLibraryBooks] = useState<OpenLibraryBook[]>([]);
+  const [openLibraryBooks, setOpenLibraryBooks] = useState<SyncBook[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const { toast } = useToast();
@@ -57,31 +34,21 @@ const Books = () => {
     setSearched(true);
 
     try {
-      // 1. Chercher dans notre DB locale
-      const localRes = await fetch(`/books?q=${encodeURIComponent(searchQuery)}&page=0&size=20`);
-      
-      if (!localRes.ok) {
-        throw new Error("Erreur lors de la recherche locale");
-      }
+      const [localData, syncedData] = await Promise.all([
+        apiFetch<Page<Book>>(`/book?q=${encodeURIComponent(searchQuery)}&page=0&size=20`),
+        apiFetch<Page<Book>>(`/book/search-openlibrary?title=${encodeURIComponent(searchQuery)}&page=0&size=10`),
+      ]);
 
-      const localData = await localRes.json();
-      setLocalBooks(localData.content || []);
+      setLocalBooks(localData?.content || []);
+      setOpenLibraryBooks(syncedData?.content || []);
 
-      // 2. Toujours chercher sur OpenLibrary en parallèle
-      const olRes = await fetch(`/books/search/openlibrary?q=${encodeURIComponent(searchQuery)}&limit=10`);
-      
-      if (!olRes.ok) {
-        throw new Error("Erreur lors de la recherche OpenLibrary");
-      }
+      const localCount = localData?.content?.length || 0;
+      const olCount = syncedData?.content?.length || 0;
 
-      const olData: OpenLibraryResponse = await olRes.json();
-      setOpenLibraryBooks(olData.docs || []);
-
-      // Toast en fonction des résultats
-      if ((localData.content && localData.content.length > 0) || (olData.docs && olData.docs.length > 0)) {
+      if (localCount + olCount > 0) {
         toast({
           title: "✅ Recherche terminée",
-          description: `${localData.content?.length || 0} livre(s) en DB, ${olData.docs?.length || 0} suggestion(s) OpenLibrary`,
+          description: `${localCount} livre(s) dans la collection, ${olCount} suggestion(s) OpenLibrary`,
         });
       } else {
         toast({
@@ -102,44 +69,33 @@ const Books = () => {
     }
   };
 
-  const addBookToDb = async (olBook: OpenLibraryBook) => {
-    try {
-      const payload = {
-        openlibraryKey: olBook.key,
-        title: olBook.title,
-        authors: olBook.author_name?.join(", ") || "",
-        isbn13: olBook.isbn?.find((i) => i.length === 13) || "",
-        isbn10: olBook.isbn?.find((i) => i.length === 10) || "",
-        coverUrl: olBook.cover_i
-          ? `https://covers.openlibrary.org/b/id/${olBook.cover_i}-M.jpg`
-          : "",
-        publishYear: olBook.first_publish_year,
-        subjects: olBook.subject?.slice(0, 5).join(",") || "",
-        description: "",
-      };
-
-      const res = await fetch("/books/from-openlibrary", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (res.ok) {
-        const addedBook = await res.json();
-        toast({
-          title: "✅ Livre ajouté !",
-          description: `"${olBook.title}" a été ajouté à votre bibliothèque`,
-        });
-        // Rafraîchir la recherche
-        await searchBooks();
-      } else {
-        throw new Error("Erreur lors de l'ajout");
-      }
-    } catch (error) {
-      console.error("Erreur ajout:", error);
+  const addBookToDb = async (olBook: SyncBook) => {
+    if (!olBook.openlibraryId) {
       toast({
         title: "❌ Erreur",
-        description: "Impossible d'ajouter le livre",
+        description: "Impossible d'ajouter ce livre (ID manquant)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await apiFetch(`/book/add-from-openlibrary?openlibraryId=${encodeURIComponent(olBook.openlibraryId)}`, {
+        method: "POST",
+      });
+      
+      toast({
+        title: "✅ Livre ajouté",
+        description: `"${olBook.title}" a été ajouté à votre collection.`,
+      });
+      
+      // Recharger la recherche pour afficher le livre dans la collection
+      handleSearch();
+    } catch (error) {
+      console.error("Erreur ajout livre:", error);
+      toast({
+        title: "❌ Erreur",
+        description: "Impossible d'ajouter le livre. Vérifiez que le backend est actif.",
         variant: "destructive",
       });
     }
@@ -153,7 +109,6 @@ const Books = () => {
           Gestion des Livres
         </h1>
 
-        {/* Barre de recherche */}
         <div className="mb-8 flex gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -171,7 +126,6 @@ const Books = () => {
           </Button>
         </div>
 
-        {/* Résultats de notre DB locale */}
         {localBooks.length > 0 && (
           <div className="mb-8">
             <h2 className="text-2xl font-semibold mb-4 text-green-600">
@@ -220,6 +174,7 @@ const Books = () => {
                   )}
                   <CardFooter className="text-xs text-gray-500">
                     {book.isbn13 && `ISBN-13: ${book.isbn13}`}
+                    {!book.isbn13 && book.isbn10 && `ISBN-10: ${book.isbn10}`}
                   </CardFooter>
                 </Card>
               ))}
@@ -227,25 +182,22 @@ const Books = () => {
           </div>
         )}
 
-        {/* Suggestions OpenLibrary */}
         {openLibraryBooks.length > 0 && (
           <div className="mb-8">
             <h2 className="text-2xl font-semibold mb-4 text-blue-600">
-              🌐 Suggestions depuis OpenLibrary ({openLibraryBooks.length})
+              🌐 Ajouts OpenLibrary (via backend) ({openLibraryBooks.length})
             </h2>
             <p className="text-sm text-gray-600 mb-4">
-              {localBooks.length > 0 
-                ? "Vous pouvez ajouter d'autres livres depuis OpenLibrary :" 
-                : "Ces livres ne sont pas encore dans votre bibliothèque. Cliquez sur \"Ajouter\" pour les enregistrer."}
+              Ces livres ont été importés depuis OpenLibrary par le backend (gateway ➜ book-service).
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {openLibraryBooks.map((book) => (
-                <Card key={book.key} className="hover:shadow-lg transition-shadow">
+                <Card key={book.openlibraryId || book.id} className="hover:shadow-lg transition-shadow">
                   <CardHeader>
                     <div className="flex gap-4">
-                      {book.cover_i ? (
+                      {book.coverUrl ? (
                         <img
-                          src={`https://covers.openlibrary.org/b/id/${book.cover_i}-M.jpg`}
+                          src={book.coverUrl}
                           alt={book.title}
                           className="w-20 h-28 object-cover rounded"
                         />
@@ -256,23 +208,21 @@ const Books = () => {
                       )}
                       <div className="flex-1">
                         <CardTitle className="text-lg">{book.title}</CardTitle>
-                        {book.author_name && (
-                          <p className="text-sm text-gray-600 mt-1">
-                            {book.author_name.join(", ")}
-                          </p>
+                        {book.authors && (
+                          <p className="text-sm text-gray-600 mt-1">{book.authors}</p>
                         )}
-                        {book.first_publish_year && (
+                        {book.publishYear && (
                           <Badge variant="outline" className="mt-2">
-                            {book.first_publish_year}
+                            {book.publishYear}
                           </Badge>
                         )}
                       </div>
                     </div>
                   </CardHeader>
-                  {book.subject && book.subject.length > 0 && (
+                  {book.subjects && (
                     <CardContent>
                       <div className="flex flex-wrap gap-1">
-                        {book.subject.slice(0, 3).map((subject, i) => (
+                        {book.subjects.split(",").slice(0, 3).map((subject, i) => (
                           <Badge key={i} variant="secondary" className="text-xs">
                             {subject}
                           </Badge>
@@ -282,13 +232,9 @@ const Books = () => {
                   )}
                   <CardFooter className="flex justify-between items-center">
                     <span className="text-xs text-gray-500">
-                      {book.isbn?.[0] && `ISBN: ${book.isbn[0]}`}
+                      {book.isbn13 || book.isbn10 ? `ISBN: ${book.isbn13 || book.isbn10}` : "ISBN non renseigné"}
                     </span>
-                    <Button
-                      size="sm"
-                      onClick={() => addBookToDb(book)}
-                      className="gap-1"
-                    >
+                    <Button size="sm" onClick={() => addBookToDb(book)} className="gap-1" variant="outline">
                       <Plus className="w-4 h-4" />
                       Ajouter
                     </Button>
@@ -299,7 +245,6 @@ const Books = () => {
           </div>
         )}
 
-        {/* Aucun résultat */}
         {searched && !loading && localBooks.length === 0 && openLibraryBooks.length === 0 && (
           <div className="text-center py-12">
             <BookIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -308,14 +253,11 @@ const Books = () => {
           </div>
         )}
 
-        {/* Message initial */}
         {!searched && (
           <div className="text-center py-12">
             <Search className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <p className="text-gray-500 text-lg">Recherchez un livre pour commencer</p>
-            <p className="text-gray-400 text-sm">
-              Tapez un titre, auteur ou ISBN puis appuyez sur Entrée
-            </p>
+            <p className="text-gray-400 text-sm">Tapez un titre, auteur ou ISBN puis appuyez sur Entrée</p>
           </div>
         )}
       </div>

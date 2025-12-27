@@ -1,11 +1,12 @@
 ## Multi-stage build for a Vite + React app
 ## Stage 1: build with Node
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Install build tools
+# Install build tools and dependencies
 COPY package.json package-lock.json* ./
-RUN npm install
+RUN npm install --include=optional && \
+    npm install --no-save @rollup/rollup-linux-x64-musl
 
 # Copy source and build
 COPY . .
