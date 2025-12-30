@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import OpenLibraryModal from "@/components/OpenLibraryModal";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { apiFetch, Page } from "@/lib/api";
@@ -18,7 +19,13 @@ interface ReviewDraft {
 export default function Collection() {
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(false);
+  const [openLibModal, setOpenLibModal] = useState(false);
   const [search, setSearch] = useState("");
+  const [author, setAuthor] = useState("");
+  const [subjects, setSubjects] = useState("");
+  const [minYear, setMinYear] = useState<number | "">("");
+  const [maxYear, setMaxYear] = useState<number | "">("");
+  const [source, setSource] = useState("all");
   const [drafts, setDrafts] = useState<Record<string, ReviewDraft>>({});
   const { toast } = useToast();
 
@@ -30,9 +37,17 @@ export default function Collection() {
   const loadBooks = async (query?: string) => {
     setLoading(true);
     try {
-      const response = await apiFetch<Page<Book>>(
-        `/book${query ? `?q=${encodeURIComponent(query)}&` : "?"}page=0&size=50`
-      );
+      const params = new URLSearchParams();
+      params.append("page", "0");
+      params.append("size", "50");
+      if (query) params.append("q", query);
+      if (author) params.append("author", author);
+      if (subjects) params.append("subjects", subjects);
+      if (minYear !== "") params.append("minYear", String(minYear));
+      if (maxYear !== "") params.append("maxYear", String(maxYear));
+      if (source && source !== "all") params.append("source", source);
+
+      const response = await apiFetch<Page<Book>>(`/book?${params.toString()}`);
       setBooks(response?.content || []);
     } catch (error) {
       console.error("Erreur chargement collection:", error);
@@ -114,11 +129,17 @@ export default function Collection() {
               Livres stockés sur LittleBook (importés via OpenLibrary ou ajoutés manuellement)
             </p>
           </div>
-          <Button onClick={() => loadBooks(search)} disabled={loading} className="rounded-full px-6">
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Rafraîchir"}
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button onClick={() => setOpenLibModal(true)} variant="secondary" className="rounded-full px-4">
+              Ajouter un livre OpenLibrary
+            </Button>
+            <Button onClick={() => loadBooks(search)} disabled={loading} className="rounded-full px-6">
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Rafraîchir"}
+            </Button>
+          </div>
         </div>
 
+        <OpenLibraryModal open={openLibModal} onOpenChange={(v) => setOpenLibModal(v)} onAdded={() => { setOpenLibModal(false); loadBooks(); }} />
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-card p-4 rounded-lg shadow-soft border border-border/50">
             <div className="text-2xl font-bold text-primary">{books.length}</div>
@@ -138,20 +159,64 @@ export default function Collection() {
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-4 mb-8">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Rechercher dans la collection (titre, auteur, ISBN)"
-              className="pl-10"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && loadBooks(search)}
-            />
+        <div className="flex flex-col gap-4 mb-8">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Rechercher dans la collection (titre, auteur, ISBN)"
+                className="pl-10"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && loadBooks(search)}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Input
+                placeholder="Auteur"
+                value={author}
+                onChange={(e) => setAuthor(e.target.value)}
+                className="w-56"
+              />
+
+              <Input
+                placeholder="Sujets (séparés par ,)"
+                value={subjects}
+                onChange={(e) => setSubjects(e.target.value)}
+                className="w-72"
+              />
+
+              <Input
+                type="number"
+                placeholder="Min année"
+                value={minYear}
+                onChange={(e) => setMinYear(e.target.value === "" ? "" : Number(e.target.value))}
+                className="w-28"
+              />
+
+              <Input
+                type="number"
+                placeholder="Max année"
+                value={maxYear}
+                onChange={(e) => setMaxYear(e.target.value === "" ? "" : Number(e.target.value))}
+                className="w-28"
+              />
+
+              <select
+                className="border rounded px-2 py-1"
+                value={source}
+                onChange={(e) => setSource(e.target.value)}
+              >
+                <option value="all">Toutes</option>
+                <option value="local">Local</option>
+                <option value="openlibrary">OpenLibrary</option>
+              </select>
+
+              <Button variant="outline" onClick={() => loadBooks(search)} disabled={loading}>
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Rechercher"}
+              </Button>
+            </div>
           </div>
-          <Button variant="outline" onClick={() => loadBooks(search)} disabled={loading}>
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Rechercher"}
-          </Button>
         </div>
 
         {loading && (

@@ -11,11 +11,9 @@ import Profile from "./pages/Profile";
 import Auth from "./pages/Auth";
 import Welcome from "./pages/Welcome";
 import NotFound from "./pages/NotFound";
-import Collection from "./pages/Collection";
 import Admin from "./pages/Admin";
-import Books from "./pages/Books";
-import BooksGrid from "./pages/BooksGrid";
 import UnifiedBooks from "./pages/UnifiedBooks";
+import Recommendations from "./pages/Recommendations";
 
 const queryClient = new QueryClient();
 
@@ -77,11 +75,7 @@ const App = () => (
               </PrivateRoute>
             }
           />
-           <Route path="/collection" element={
-            <Layout>
-              <Collection />
-            </Layout>
-          } />
+          
 
           {/* Page d'administration (protégée) */}
           <Route
@@ -101,7 +95,7 @@ const App = () => (
             element={
               <PrivateRoute>
                 <Layout>
-                  <Books />
+                  <UnifiedBooks />
                 </Layout>
               </PrivateRoute>
             }
@@ -113,7 +107,7 @@ const App = () => (
             element={
               <PrivateRoute>
                 <Layout>
-                  <BooksGrid />
+                  <UnifiedBooks />
                 </Layout>
               </PrivateRoute>
             }
@@ -121,6 +115,18 @@ const App = () => (
 
           {/* Page de bienvenue après connexion */}
           <Route path="/welcome" element={<Welcome />} />
+
+          {/* Recommandations (protégée) */}
+          <Route
+            path="/recommendations"
+            element={
+              <PrivateRoute>
+                <Layout>
+                  <Recommendations />
+                </Layout>
+              </PrivateRoute>
+            }
+          />
 
           {/* 404 */}
           <Route path="*" element={<NotFound />} />

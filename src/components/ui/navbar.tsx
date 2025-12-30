@@ -94,6 +94,17 @@ export const Navbar = () => {
             </Button>
           </Link>
 
+          <Link to="/recommendations">
+            <Button 
+              variant={isActive("/recommendations") ? "default" : "ghost"} 
+              size="sm" 
+              className="rounded-full"
+            >
+              <Library className="h-4 w-4 mr-2" />
+              Reco
+            </Button>
+          </Link>
+
           <Button variant="ghost" size="sm" className="rounded-full">
             <Heart className="h-4 w-4 mr-2" />
             Favoris

@@ -7,6 +7,7 @@ interface BookFlashcardProps {
   id: string;
   title: string;
   authors: string;
+  source?: string;
   coverUrl?: string;
   publishYear?: number;
   description?: string;
@@ -32,6 +33,7 @@ export function BookFlashcard({
   id,
   title,
   authors,
+  source,
   coverUrl,
   publishYear,
   description,
@@ -73,7 +75,14 @@ export function BookFlashcard({
       <CardContent className="p-4 space-y-3">
         <div>
           <CardTitle className="line-clamp-2 text-lg">{title}</CardTitle>
-          <p className="text-sm text-gray-600">{authors}</p>
+          <div className="flex items-center gap-2">
+            <p className="text-sm text-gray-600">{authors}</p>
+            {source && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">
+                {source === "openlibrary" ? "OpenLibrary" : source}
+              </span>
+            )}
+          </div>
           {publishYear && (
             <p className="text-xs text-gray-500 mt-1">{publishYear}</p>
           )}

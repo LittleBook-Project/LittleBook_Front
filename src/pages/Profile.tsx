@@ -48,11 +48,50 @@ export default function Profile() {
         const data = await apiFetch<Review[]>(`/reviews/user/${userId}`);
         const enriched = await Promise.all(
           data.map(async (r) => {
+            // Try multiple strategies to resolve the book for better resilience
             try {
-              const page = await apiFetch<Page<Book>>(`/book?isbn=${encodeURIComponent(r.bookIsbn)}&page=0&size=1`);
-              return { review: r, book: page.content?.[0] } as EnrichedReview;
+              // 1) If review references bookId (UUID), fetch by id
+              if (r.bookId) {
+                try {
+                  const b = await apiFetch<Book>(`/book/${encodeURIComponent(r.bookId)}`);
+                  return { review: r, book: b } as EnrichedReview;
+                } catch (e) {
+                  // ignore and continue
+                }
+              }
+
+              // 2) If review has ISBN, try list endpoint first
+              if (r.bookIsbn) {
+                try {
+                  const page = await apiFetch<Page<Book>>(`/book?isbn=${encodeURIComponent(r.bookIsbn)}&page=0&size=1`);
+                  if (page?.content && page.content.length > 0) {
+                    return { review: r, book: page.content[0] } as EnrichedReview;
+                  }
+                } catch (e) {
+                  // ignore and try specific endpoints below
+                }
+
+                // 3) try /by-isbn13 (some books stored as isbn13)
+                try {
+                  const res = await apiFetch<Book>(`/book/by-isbn13?isbn13=${encodeURIComponent(r.bookIsbn)}`);
+                  if (res) return { review: r, book: res } as EnrichedReview;
+                } catch (e) {
+                  // ignore
+                }
+
+                // 4) try by openlibrary id (in case stored differently)
+                try {
+                  const res2 = await apiFetch<Book>(`/book/by-olid?olId=${encodeURIComponent(r.bookIsbn)}`);
+                  if (res2) return { review: r, book: res2 } as EnrichedReview;
+                } catch (e) {
+                  // ignore
+                }
+              }
+
+              // Not found
+              return { review: r } as EnrichedReview;
             } catch (err) {
-              console.warn("Livre introuvable pour review", r.bookIsbn, err);
+              console.warn("Livre introuvable pour review", r.bookIsbn || r.bookId, err);
               return { review: r } as EnrichedReview;
             }
           })
@@ -81,8 +120,31 @@ export default function Profile() {
       const enriched = await Promise.all(
         data.map(async (r) => {
           try {
-            const page = await apiFetch<Page<Book>>(`/book?isbn=${encodeURIComponent(r.bookIsbn)}&page=0&size=1`);
-            return { review: r, book: page.content?.[0] } as EnrichedReview;
+            if (r.bookId) {
+              try {
+                const b = await apiFetch<Book>(`/book/${encodeURIComponent(r.bookId)}`);
+                return { review: r, book: b } as EnrichedReview;
+              } catch (e) {}
+            }
+
+            if (r.bookIsbn) {
+              try {
+                const page = await apiFetch<Page<Book>>(`/book?isbn=${encodeURIComponent(r.bookIsbn)}&page=0&size=1`);
+                if (page?.content && page.content.length > 0) return { review: r, book: page.content[0] } as EnrichedReview;
+              } catch (e) {}
+
+              try {
+                const res = await apiFetch<Book>(`/book/by-isbn13?isbn13=${encodeURIComponent(r.bookIsbn)}`);
+                if (res) return { review: r, book: res } as EnrichedReview;
+              } catch (e) {}
+
+              try {
+                const res2 = await apiFetch<Book>(`/book/by-olid?olId=${encodeURIComponent(r.bookIsbn)}`);
+                if (res2) return { review: r, book: res2 } as EnrichedReview;
+              } catch (e) {}
+            }
+
+            return { review: r } as EnrichedReview;
           } catch (err) {
             return { review: r } as EnrichedReview;
           }

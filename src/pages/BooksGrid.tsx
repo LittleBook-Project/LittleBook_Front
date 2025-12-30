@@ -1,17 +1,4 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { BookFlashcard } from "@/components/BookFlashcard";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Loader2, Search } from "lucide-react";
+export { default } from "./UnifiedBooks";
 
 interface Book {
   id: string;
@@ -22,6 +9,7 @@ interface Book {
   coverUrl?: string;
   publishYear?: number;
   subjects?: string;
+  source?: string;
   description?: string;
 }
 
@@ -45,16 +33,63 @@ export default function BooksGrid() {
   const navigate = useNavigate();
   const [sortBy, setSortBy] = useState("recent");
   const [searchTerm, setSearchTerm] = useState("");
+  const [author, setAuthor] = useState("");
+  const [subjectsFilter, setSubjectsFilter] = useState("");
+  const [minYear, setMinYear] = useState<number | "">("");
+  const [maxYear, setMaxYear] = useState<number | "">("");
+  const [sourceFilter, setSourceFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(0);
   const pageSize = 12;
 
   // Fetch all books with pagination
   const { data: booksData, isLoading } = useQuery({
-    queryKey: ["books", currentPage, sortBy, searchTerm],
+    queryKey: ["books", currentPage, sortBy, searchTerm, author, subjectsFilter, minYear, maxYear, sourceFilter],
     queryFn: async () => {
-      const res = await fetch(
-        `/api/book?page=${currentPage}&size=${pageSize}&search=${searchTerm}`
-      );
+      const params = new URLSearchParams();
+      params.append("page", String(currentPage));
+      params.append("size", String(pageSize));
+      if (searchTerm) params.append("q", searchTerm);
+      if (author) params.append("author", author);
+      if (subjectsFilter) params.append("subjects", subjectsFilter);
+      if (minYear !== "") params.append("minYear", String(minYear));
+      if (maxYear !== "") params.append("maxYear", String(maxYear));
+      if (sourceFilter && sourceFilter !== "all") params.append("source", sourceFilter);
+
+      // map client sort to backend fields
+      let sortField: string | null = null;
+      let sortDir: string | null = null;
+      switch (sortBy) {
+        case "title-asc":
+          sortField = "title";
+          sortDir = "asc";
+          break;
+        case "title-desc":
+          sortField = "title";
+          sortDir = "desc";
+          break;
+        case "author":
+          sortField = "authors";
+          sortDir = "asc";
+          break;
+        case "year-new":
+          sortField = "publishYear";
+          sortDir = "desc";
+          break;
+        case "year-old":
+          sortField = "publishYear";
+          sortDir = "asc";
+          break;
+        case "recent":
+        default:
+          sortField = null;
+      }
+      if (sortField) {
+        params.append("sort", sortField);
+        params.append("dir", sortDir ?? "asc");
+      }
+
+      const url = `/api/book?${params.toString()}`;
+      const res = await fetch(url);
       if (!res.ok) throw new Error("Erreur lors du chargement");
       return res.json();
     },
@@ -64,24 +99,7 @@ export default function BooksGrid() {
   const totalPages = booksData?.totalPages || 0;
   const totalElements = booksData?.totalElements || 0;
 
-  // Sort books
-  const sortedBooks = [...books].sort((a, b) => {
-    switch (sortBy) {
-      case "title-asc":
-        return a.title.localeCompare(b.title);
-      case "title-desc":
-        return b.title.localeCompare(a.title);
-      case "author":
-        return a.authors.localeCompare(b.authors);
-      case "year-new":
-        return (b.publishYear || 0) - (a.publishYear || 0);
-      case "year-old":
-        return (a.publishYear || 0) - (b.publishYear || 0);
-      case "recent":
-      default:
-        return 0;
-    }
-  });
+  // Server-side sorting is used; `books` is trusted as returned by backend
 
   const handleAddReview = (bookId: string) => {
     navigate("/books");
@@ -145,6 +163,62 @@ export default function BooksGrid() {
               <SelectItem value="year-old">Année (ancien)</SelectItem>
             </SelectContent>
           </Select>
+
+          {/* Author filter */}
+          <div className="w-48">
+            <Input
+              placeholder="Auteur"
+              value={author}
+              onChange={(e) => {
+                setAuthor(e.target.value);
+                setCurrentPage(0);
+              }}
+            />
+          </div>
+
+          {/* Subjects filter */}
+          <div className="w-48">
+            <Input
+              placeholder="Sujets (séparés par ,)"
+              value={subjectsFilter}
+              onChange={(e) => {
+                setSubjectsFilter(e.target.value);
+                setCurrentPage(0);
+              }}
+            />
+          </div>
+
+          {/* Year range */}
+          <div className="flex gap-2 items-center">
+            <Input
+              type="number"
+              placeholder="Min année"
+              value={minYear}
+              onChange={(e) => setMinYear(e.target.value === "" ? "" : Number(e.target.value))}
+              className="w-28"
+            />
+            <Input
+              type="number"
+              placeholder="Max année"
+              value={maxYear}
+              onChange={(e) => setMaxYear(e.target.value === "" ? "" : Number(e.target.value))}
+              className="w-28"
+            />
+          </div>
+
+          {/* Source filter */}
+          <div className="w-40">
+            <Select value={sourceFilter} onValueChange={setSourceFilter}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Source" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Toutes</SelectItem>
+                <SelectItem value="local">Local</SelectItem>
+                <SelectItem value="openlibrary">OpenLibrary</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {/* Books Grid */}
@@ -155,10 +229,11 @@ export default function BooksGrid() {
         ) : sortedBooks.length > 0 ? (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {sortedBooks.map((book) => (
+              {books.map((book) => (
                 <BookFlashcard
                   key={book.id}
                   {...book}
+                  source={book.source}
                   onAddReview={handleAddReview}
                   onEditReview={handleEditReview}
                   onDeleteReview={handleDeleteReview}
