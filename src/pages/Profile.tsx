@@ -3,10 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { Badge } from "../components/ui/badge";
 import { Edit, Calendar, Star } from "lucide-react";
 import { useEffect, useState } from "react";
-import { apiFetch, Page } from "@/lib/api";
+import { apiFetch, Page, apiUrl } from "@/lib/api";
 import { Review } from "@/types/review";
 import { Book } from "@/types/book";
 import { useToast } from "@/hooks/use-toast";
+import ReviewDialog from "@/components/ReviewDialog";
+import { Trash2, Edit as EditIcon } from "lucide-react";
 
 interface EnrichedReview {
   review: Review;
@@ -19,6 +21,11 @@ export default function Profile() {
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // Edit dialog state
+  const [editing, setEditing] = useState(false);
+  const [editingReview, setEditingReview] = useState<Review | null>(null);
+  const [editingBookTitle, setEditingBookTitle] = useState<string>("");
 
   useEffect(() => {
     const raw = localStorage.getItem("user");
@@ -38,7 +45,7 @@ export default function Profile() {
         return;
       }
       try {
-        const data = await apiFetch<Review[]>(`/review/user/${userId}`);
+        const data = await apiFetch<Review[]>(`/reviews/user/${userId}`);
         const enriched = await Promise.all(
           data.map(async (r) => {
             try {
@@ -65,6 +72,49 @@ export default function Profile() {
 
     fetchReviews();
   }, [userId, toast]);
+
+  const refresh = async () => {
+    setLoading(true);
+    setReviews([]);
+    try {
+      const data = await apiFetch<Review[]>(`/reviews/user/${userId}`);
+      const enriched = await Promise.all(
+        data.map(async (r) => {
+          try {
+            const page = await apiFetch<Page<Book>>(`/book?isbn=${encodeURIComponent(r.bookIsbn)}&page=0&size=1`);
+            return { review: r, book: page.content?.[0] } as EnrichedReview;
+          } catch (err) {
+            return { review: r } as EnrichedReview;
+          }
+        })
+      );
+      setReviews(enriched);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onEdit = (r: Review, bookTitle?: string) => {
+    setEditingReview(r);
+    setEditingBookTitle(bookTitle || "");
+    setEditing(true);
+  };
+
+  const onDelete = async (r: Review) => {
+    if (!userId) return;
+    const ok = window.confirm("Supprimer cet avis ? Cette action est irréversible.");
+    if (!ok) return;
+    try {
+      await fetch(apiUrl(`/reviews/${r.id}?userUuid=${encodeURIComponent(userId)}`), { method: "DELETE", credentials: 'include' });
+      toast({ title: "✅ Avis supprimé" });
+      await refresh();
+    } catch (err: any) {
+      console.error("Erreur suppression review:", err);
+      toast({ title: "❌ Impossible de supprimer", description: err?.message, variant: "destructive" });
+    }
+  };
 
   if (!user) {
     return (
@@ -136,11 +186,29 @@ export default function Profile() {
                 <p className="text-xs text-muted-foreground">
                   ISBN: {review.bookIsbn} • Le {review.reviewCreationDate || "date inconnue"}
                 </p>
+                <div className="flex items-center gap-2 mt-2">
+                  <Button size="sm" variant="outline" onClick={() => onEdit(review, book?.title)}>
+                    <EditIcon className="mr-2 h-3 w-3" /> Modifier
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => onDelete(review)}>
+                    <Trash2 className="mr-2 h-3 w-3" /> Supprimer
+                  </Button>
+                </div>
               </div>
             ))}
           </CardContent>
         </Card>
       </div>
+      {editing && editingReview && (
+        <ReviewDialog
+          open={editing}
+          onOpenChange={(v) => { if (!v) setEditing(false); else setEditing(v); }}
+          bookId={editingReview.bookIsbn}
+          bookTitle={editingBookTitle || editingReview.bookIsbn}
+          existingReview={{ id: String(editingReview.id), rating: editingReview.rating || 0, comment: editingReview.description }}
+          onReviewSubmitted={async () => { setEditing(false); await refresh(); }}
+        />
+      )}
     </div>
   );
 }

@@ -79,13 +79,13 @@ export default function UnifiedBooks() {
     try {
       // Essayer par ISBN d'abord
       if (book.isbn13) {
-        const res = await apiFetch<Review[]>(`/review/book/${book.isbn13}`);
+        const res = await apiFetch<Review[]>(`/reviews/book/${book.isbn13}`);
         if (res && res.length > 0) return res;
       }
       
       // Si pas d'ISBN ou pas de résultats, essayer par bookId
       if (book.id) {
-        const res = await apiFetch<Review[]>(`/review/book-id/${book.id}`);
+        const res = await apiFetch<Review[]>(`/reviews/book-id/${book.id}`);
         return res || [];
       }
       
@@ -208,7 +208,7 @@ export default function UnifiedBooks() {
         bookId: book.id,
       };
 
-      await apiFetch<Review>("/review", {
+      await apiFetch<Review>("/reviews", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
