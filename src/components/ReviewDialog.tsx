@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { apiUrl } from "@/lib/api";
 
 interface ReviewDialogProps {
   open: boolean;
@@ -47,24 +48,43 @@ const ReviewDialog = ({
       const url = existingReview
         ? `/reviews/${existingReview.id}`
         : "/reviews";
-      
+
       const method = existingReview ? "PUT" : "POST";
-      
-      const res = await fetch(url, {
+
+      // Build body according to backend DTOs
+      let body: any = {};
+      if (existingReview) {
+        body = {
+          description: comment.trim() || undefined,
+          rating,
+        };
+      } else {
+        // Create: include user identifier and book ISBN
+        const raw = localStorage.getItem("user");
+        let parsed: any = null;
+        try { parsed = raw ? JSON.parse(raw) : null; } catch (e) { parsed = null; }
+        const userUuid = parsed?.uid || parsed?.id || localStorage.getItem("userId") || undefined;
+        body = {
+          userUuid,
+          bookIsbn: bookId,
+          description: comment.trim() || undefined,
+          rating,
+        };
+      }
+
+      const res = await fetch(apiUrl(url), {
         method,
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          bookId,
-          rating,
-          comment: comment.trim() || undefined,
-        }),
+        credentials: 'include',
+        body: JSON.stringify(body),
       });
 
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || "Erreur lors de l'enregistrement");
+        let errorText = await res.text();
+        try { errorText = JSON.parse(errorText).message || errorText; } catch (e) {}
+        throw new Error(errorText || "Erreur lors de l'enregistrement");
       }
 
       toast({

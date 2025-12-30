@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserLoginStats, LoginEvent, ReviewActivity, Summary, UserDetails } from "@/types/admin";
 import {
@@ -11,6 +12,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { format, parseISO } from "date-fns";
+import ReviewDialog from "@/components/ReviewDialog";
+import { Review } from "@/types/review";
+import { Input } from "@/components/ui/input";
+import { Trash2, Edit } from "lucide-react";
 import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -22,6 +27,8 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
+import { ArcElement } from 'chart.js';
+import { Pie } from 'react-chartjs-2';
 
 ChartJS.register(
   CategoryScale,
@@ -32,12 +39,20 @@ ChartJS.register(
   Tooltip,
   Legend
 );
+ChartJS.register(ArcElement);
 
 const Admin = () => {
   const [users, setUsers] = useState<UserLoginStats[]>([]);
   const [userDetails, setUserDetails] = useState<Record<string, UserDetails>>({});
   const [loginEvents, setLoginEvents] = useState<LoginEvent[]>([]);
   const [reviews, setReviews] = useState<ReviewActivity[]>([]);
+  const [moderationResults, setModerationResults] = useState<Review[]>([]);
+  const [moderationLoading, setModerationLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchMode, setSearchMode] = useState<'isbn' | 'user'>('isbn');
+  const [modDialogOpen, setModDialogOpen] = useState(false);
+  const [modEditingReview, setModEditingReview] = useState<Review | null>(null);
+  const [modEditingBookTitle, setModEditingBookTitle] = useState("");
   const [summary, setSummary] = useState<Summary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -127,6 +142,66 @@ const Admin = () => {
     }
   };
 
+  const fetchModerationByIsbn = async (isbn: string) => {
+    setModerationLoading(true);
+    try {
+      const res = await fetch(adminUrl(`/reviews/book/${encodeURIComponent(isbn)}`), { credentials: 'include' });
+      if (!res.ok) throw new Error(await res.text());
+      const data: Review[] = await res.json();
+      setModerationResults(data);
+    } catch (e) {
+      console.error(e);
+      setModerationResults([]);
+    } finally {
+      setModerationLoading(false);
+    }
+  };
+
+  const fetchModerationByUser = async (userUuid: string) => {
+    setModerationLoading(true);
+    try {
+      const res = await fetch(adminUrl(`/reviews/user/${encodeURIComponent(userUuid)}`), { credentials: 'include' });
+      if (!res.ok) throw new Error(await res.text());
+      const data: Review[] = await res.json();
+      setModerationResults(data);
+    } catch (e) {
+      console.error(e);
+      setModerationResults([]);
+    } finally {
+      setModerationLoading(false);
+    }
+  };
+
+  const openModEdit = async (r: Review) => {
+    // try to load book title
+    let title = r.bookIsbn;
+    try {
+      const bres = await fetch(adminUrl(`/book?isbn=${encodeURIComponent(r.bookIsbn)}&page=0&size=1`), { credentials: 'include' });
+      if (bres.ok) {
+        const j = await bres.json();
+        title = j.content?.[0]?.title || title;
+      }
+    } catch (e) {
+      // ignore
+    }
+    setModEditingBookTitle(title);
+    setModEditingReview(r);
+    setModDialogOpen(true);
+  };
+
+  const modDelete = async (r: Review) => {
+    if (!confirm('Supprimer cet avis ?')) return;
+    try {
+      const res = await fetch(adminUrl(`/reviews/${r.id}?userUuid=${encodeURIComponent(r.userUuid || '')}`), { method: 'DELETE', credentials: 'include' });
+      if (!res.ok) throw new Error(await res.text());
+      setModerationResults(prev => prev.filter(x => x.id !== r.id));
+      alert('Avis supprimé');
+    } catch (e) {
+      console.error(e);
+      alert('Erreur suppression');
+    }
+  };
+
   const loginChartData = {
     labels: loginEvents.map((event) => 
       event.timestamp ? format(parseISO(event.timestamp), "dd/MM HH:mm") : "N/A"
@@ -139,6 +214,17 @@ const Admin = () => {
         tension: 0.1,
       },
     ],
+  };
+
+  // Pie chart: actifs vs inactifs
+  const activeCount = Object.values(userDetails).filter(u => u?.isActive).length;
+  const inactiveCount = Object.values(userDetails).filter(u => u && !u.isActive).length;
+  const activeChartData = {
+    labels: ['Actifs', 'Inactifs'],
+    datasets: [{
+      data: [activeCount, inactiveCount],
+      backgroundColor: ['#34D399', '#FCA5A5'],
+    }]
   };
 
   return (
@@ -198,6 +284,17 @@ const Admin = () => {
 
         <TabsContent value="users">
           <Card className="p-4">
+            <div className="mb-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="md:col-span-1">
+                <h4 className="font-semibold mb-2">Statut utilisateurs</h4>
+                <div className="h-40">
+                  <Pie data={activeChartData} />
+                </div>
+              </div>
+              <div className="md:col-span-2">
+                {/* Table principal */}
+              </div>
+            </div>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -207,6 +304,7 @@ const Admin = () => {
                   <TableHead>Total connexions</TableHead>
                   <TableHead>Moyenne jours entre connexions</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -236,6 +334,69 @@ const Admin = () => {
                         <span className={`px-2 py-1 rounded-full text-xs ${details?.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                           {details?.isActive ? 'Actif' : 'Inactif'}
                         </span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <button
+                            className="px-2 py-1 bg-blue-500 text-white rounded text-xs"
+                            onClick={async () => {
+                              const name = window.prompt('Nouveau nom', details?.name || '');
+                              if (name === null) return;
+                              const roles = window.prompt('Roles (virgule séparés)', details?.roles || 'ROLE_USER');
+                              try {
+                                const resp = await fetch(userUrl(`/user/${user.userId}`), {
+                                  method: 'PATCH',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  credentials: 'include',
+                                  body: JSON.stringify({ name, roles })
+                                });
+                                if (!resp.ok) {
+                                  alert('Erreur mise à jour: ' + await resp.text());
+                                  return;
+                                }
+                                const updated = await fetch(userUrl(`/user/${user.userId}`));
+                                if (updated.ok) {
+                                  const js = await updated.json();
+                                  setUserDetails(prev => ({ ...prev, [user.userId]: js }));
+                                }
+                                alert('Utilisateur mis à jour');
+                              } catch (e) {
+                                console.error(e);
+                                alert('Erreur réseau lors de la mise à jour');
+                              }
+                            }}
+                          >
+                            Éditer
+                          </button>
+                          <button
+                            className="px-2 py-1 bg-red-500 text-white rounded text-xs"
+                            onClick={async () => {
+                              if (!confirm('Désactiver cet utilisateur ?')) return;
+                              try {
+                                const resp = await fetch(userUrl(`/user/${user.userId}`), {
+                                  method: 'DELETE',
+                                  credentials: 'include'
+                                });
+                                if (!resp.ok) { alert('Erreur suppression: ' + await resp.text()); return; }
+                                // refresh details
+                                const updated = await fetch(userUrl(`/user/${user.userId}`));
+                                if (updated.ok) {
+                                  const js = await updated.json();
+                                  setUserDetails(prev => ({ ...prev, [user.userId]: js }));
+                                } else {
+                                  // user may be gone; remove from map
+                                  setUserDetails(prev => { const copy = { ...prev }; delete copy[user.userId]; return copy; });
+                                }
+                                alert('Utilisateur désactivé');
+                              } catch (e) {
+                                console.error(e);
+                                alert('Erreur réseau lors de la désactivation');
+                              }
+                            }}
+                          >
+                            Désactiver
+                          </button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -275,28 +436,101 @@ const Admin = () => {
         </TabsContent>
 
         <TabsContent value="reviews">
-          <Card className="p-4">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>ID Utilisateur</TableHead>
-                  <TableHead>ID Livre</TableHead>
-                  <TableHead>Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {reviews.map((review, index) => (
-                  <TableRow key={index}>
-                    <TableCell>{formatDate(review.timestamp)}</TableCell>
-                    <TableCell>{review.userId}</TableCell>
-                    <TableCell>{review.bookId}</TableCell>
-                    <TableCell>{review.action}</TableCell>
+          <Card className="p-4 space-y-4">
+            <div className="flex items-center gap-2">
+              <select className="input" value={searchMode} onChange={(e) => setSearchMode(e.target.value as 'isbn' | 'user')}>
+                <option value="isbn">Par ISBN</option>
+                <option value="user">Par UUID utilisateur</option>
+              </select>
+              <Input placeholder={searchMode === 'isbn' ? 'Saisir ISBN (ex: 978...)' : 'Saisir UUID utilisateur'} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+              <Button onClick={async () => { if (!searchQuery) return; if (searchMode === 'isbn') await fetchModerationByIsbn(searchQuery); else await fetchModerationByUser(searchQuery); }}>Rechercher</Button>
+              <Button variant="ghost" onClick={() => { setSearchQuery(''); setModerationResults([]); }}>Réinitialiser</Button>
+            </div>
+
+            <div>
+              <h3 className="font-semibold mb-2">Résultats de modération</h3>
+              {moderationLoading && <p>Chargement...</p>}
+              {!moderationLoading && moderationResults.length === 0 && <p className="text-muted-foreground">Aucun avis trouvé. Utilisez la recherche par ISBN ou UUID.</p>}
+              {!moderationLoading && moderationResults.length > 0 && (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>ID</TableHead>
+                      <TableHead>Utilisateur</TableHead>
+                      <TableHead>ISBN</TableHead>
+                      <TableHead>Note</TableHead>
+                      <TableHead>Commentaire</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {moderationResults.map((r) => (
+                      <TableRow key={r.id}>
+                        <TableCell>{String(r.id)}</TableCell>
+                        <TableCell>{r.userUuid}</TableCell>
+                        <TableCell>{r.bookIsbn}</TableCell>
+                        <TableCell>{r.rating}</TableCell>
+                        <TableCell className="max-w-md truncate">{r.description}</TableCell>
+                        <TableCell>{r.reviewCreationDate}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <button className="px-2 py-1 bg-blue-500 text-white rounded text-xs" onClick={() => openModEdit(r)}>
+                              <Edit className="mr-2 h-3 w-3"/> Éditer
+                            </button>
+                            <button className="px-2 py-1 bg-red-500 text-white rounded text-xs" onClick={() => modDelete(r)}>
+                              <Trash2 className="mr-2 h-3 w-3"/> Supprimer
+                            </button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </div>
+
+            {/* Activity log (existing) */}
+            <div>
+              <h3 className="font-semibold mb-2">Journal d'activité (summary)</h3>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>ID Utilisateur</TableHead>
+                    <TableHead>ID Livre</TableHead>
+                    <TableHead>Action</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {reviews.map((review, index) => (
+                    <TableRow key={index}>
+                      <TableCell>{formatDate(review.timestamp)}</TableCell>
+                      <TableCell>{review.userId}</TableCell>
+                      <TableCell>{review.bookId}</TableCell>
+                      <TableCell>{review.action}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </Card>
+
+          {modEditingReview && (
+            <ReviewDialog
+              open={modDialogOpen}
+              onOpenChange={(v) => { if (!v) setModDialogOpen(false); else setModDialogOpen(v); }}
+              bookId={modEditingReview.bookIsbn}
+              bookTitle={modEditingBookTitle}
+              existingReview={{ id: String(modEditingReview.id), rating: modEditingReview.rating || 0, comment: modEditingReview.description }}
+              onReviewSubmitted={async () => {
+                setModDialogOpen(false);
+                // refresh moderation list
+                if (searchMode === 'isbn' && searchQuery) await fetchModerationByIsbn(searchQuery);
+                if (searchMode === 'user' && searchQuery) await fetchModerationByUser(searchQuery);
+              }}
+            />
+          )}
         </TabsContent>
       </Tabs>
     </div>

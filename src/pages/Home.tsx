@@ -70,7 +70,7 @@ export default function Home() {
       const booksWithReviews = await Promise.all(
         books.map(async (book) => {
           try {
-            const res = await fetch(`/api/review/book/${book.isbn13}`);
+            const res = await fetch(`/api/reviews/book/${book.isbn13}`);
             const reviews = res.ok ? await res.json() : [];
             return {
               ...book,
@@ -120,7 +120,7 @@ export default function Home() {
     setIsSubmittingReview(true);
     try {
       const user = JSON.parse(localStorage.getItem("user") || "{}");
-      const res = await fetch("/api/review", {
+      const res = await fetch("/api/reviews", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

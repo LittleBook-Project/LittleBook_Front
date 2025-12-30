@@ -93,7 +93,7 @@ export default function BooksGrid() {
 
   const handleDeleteReview = (bookId: string, reviewId: string) => {
     // Call delete API
-    fetch(`/api/review/${reviewId}?userUuid=${localStorage.getItem("userId")}`, {
+    fetch(`/api/reviews/${reviewId}?userUuid=${localStorage.getItem("userId")}`, {
       method: "DELETE",
     })
       .then(() => {

@@ -84,7 +84,7 @@ export default function Collection() {
         bookIsbn,
       };
 
-      await apiFetch<Review>("/review", {
+      await apiFetch<Review>("/reviews", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
