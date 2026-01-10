@@ -149,8 +149,8 @@ export default function Auth() {
         console.warn("⚠️ Backend non joignable :", backendError);
       }
 
-      // Redirection vers la page de bienvenue
-      navigate("/welcome");
+        // Redirection vers la page d'accueil
+      navigate("/");
     } catch (error: unknown) {
       if (error instanceof FirebaseError) {
         console.error("❌ Erreur Firebase Google Login :", error);
@@ -197,7 +197,7 @@ export default function Auth() {
     } catch (error : unknown) {
         console.warn("⚠️ Backend non joignable ou erreur /api/auth/me :", error);
       }
-      navigate("/welcome");
+      navigate("/");
     }catch(error: unknown) {
       if (error instanceof FirebaseError) {
         console.error("❌ Erreur Firebase Microsoft Login :", error);
