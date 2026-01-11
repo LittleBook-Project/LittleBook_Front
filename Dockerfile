@@ -5,8 +5,7 @@ WORKDIR /app
 
 # Install build tools and dependencies
 COPY package.json package-lock.json* ./
-RUN npm install --include=optional && \
-    npm install --no-save @rollup/rollup-linux-x64-musl
+RUN npm install --legacy-peer-deps
 
 # Copy source and build
 COPY . .

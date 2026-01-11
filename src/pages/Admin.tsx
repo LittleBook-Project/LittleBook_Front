@@ -176,7 +176,7 @@ const Admin = () => {
     // try to load book title
     let title = r.bookIsbn;
     try {
-      const bres = await fetch(adminUrl(`/book?isbn=${encodeURIComponent(r.bookIsbn)}&page=0&size=1`), { credentials: 'include' });
+      const bres = await fetch(adminUrl(`/books?isbn=${encodeURIComponent(r.bookIsbn)}&page=0&size=1`), { credentials: 'include' });
       if (bres.ok) {
         const j = await bres.json();
         title = j.content?.[0]?.title || title;

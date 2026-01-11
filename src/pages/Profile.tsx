@@ -53,7 +53,7 @@ export default function Profile() {
               // 1) If review references bookId (UUID), fetch by id
               if (r.bookId) {
                 try {
-                  const b = await apiFetch<Book>(`/book/${encodeURIComponent(r.bookId)}`);
+                  const b = await apiFetch<Book>(`/books/${encodeURIComponent(r.bookId)}`);
                   return { review: r, book: b } as EnrichedReview;
                 } catch (e) {
                   // ignore and continue
@@ -63,7 +63,7 @@ export default function Profile() {
               // 2) If review has ISBN, try list endpoint first
               if (r.bookIsbn) {
                 try {
-                  const page = await apiFetch<Page<Book>>(`/book?isbn=${encodeURIComponent(r.bookIsbn)}&page=0&size=1`);
+                  const page = await apiFetch<Page<Book>>(`/books?isbn=${encodeURIComponent(r.bookIsbn)}&page=0&size=1`);
                   if (page?.content && page.content.length > 0) {
                     return { review: r, book: page.content[0] } as EnrichedReview;
                   }
@@ -73,7 +73,7 @@ export default function Profile() {
 
                 // 3) try /by-isbn13 (some books stored as isbn13)
                 try {
-                  const res = await apiFetch<Book>(`/book/by-isbn13?isbn13=${encodeURIComponent(r.bookIsbn)}`);
+                  const res = await apiFetch<Book>(`/books/by-isbn13?isbn13=${encodeURIComponent(r.bookIsbn)}`);
                   if (res) return { review: r, book: res } as EnrichedReview;
                 } catch (e) {
                   // ignore
@@ -81,7 +81,7 @@ export default function Profile() {
 
                 // 4) try by openlibrary id (in case stored differently)
                 try {
-                  const res2 = await apiFetch<Book>(`/book/by-olid?olId=${encodeURIComponent(r.bookIsbn)}`);
+                  const res2 = await apiFetch<Book>(`/books/by-olid?olId=${encodeURIComponent(r.bookIsbn)}`);
                   if (res2) return { review: r, book: res2 } as EnrichedReview;
                 } catch (e) {
                   // ignore
@@ -122,7 +122,7 @@ export default function Profile() {
           try {
             if (r.bookId) {
               try {
-                const b = await apiFetch<Book>(`/book/${encodeURIComponent(r.bookId)}`);
+                const b = await apiFetch<Book>(`/books/${encodeURIComponent(r.bookId)}`);
                 return { review: r, book: b } as EnrichedReview;
               } catch (e) {}
             }
@@ -134,12 +134,12 @@ export default function Profile() {
               } catch (e) {}
 
               try {
-                const res = await apiFetch<Book>(`/book/by-isbn13?isbn13=${encodeURIComponent(r.bookIsbn)}`);
+                const res = await apiFetch<Book>(`/books/by-isbn13?isbn13=${encodeURIComponent(r.bookIsbn)}`);
                 if (res) return { review: r, book: res } as EnrichedReview;
               } catch (e) {}
 
               try {
-                const res2 = await apiFetch<Book>(`/book/by-olid?olId=${encodeURIComponent(r.bookIsbn)}`);
+                const res2 = await apiFetch<Book>(`/books/by-olid?olId=${encodeURIComponent(r.bookIsbn)}`);
                 if (res2) return { review: r, book: res2 } as EnrichedReview;
               } catch (e) {}
             }

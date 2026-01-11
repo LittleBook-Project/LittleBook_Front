@@ -47,7 +47,7 @@ export default function Collection() {
       if (maxYear !== "") params.append("maxYear", String(maxYear));
       if (source && source !== "all") params.append("source", source);
 
-      const response = await apiFetch<Page<Book>>(`/book?${params.toString()}`);
+      const response = await apiFetch<Page<Book>>(`/books?${params.toString()}`);
       setBooks(response?.content || []);
     } catch (error) {
       console.error("Erreur chargement collection:", error);
