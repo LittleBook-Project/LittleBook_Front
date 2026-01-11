@@ -15,7 +15,7 @@ import { format, parseISO } from "date-fns";
 import ReviewDialog from "@/components/ReviewDialog";
 import { Review } from "@/types/review";
 import { Input } from "@/components/ui/input";
-import { Trash2, Edit } from "lucide-react";
+import { Trash2, Edit, Users, LogIn, MessageSquare, Heart } from "lucide-react";
 import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -27,8 +27,23 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
-import { ArcElement } from 'chart.js';
-import { Pie } from 'react-chartjs-2';
+import { ArcElement, BarElement } from 'chart.js';
+import { Pie, Bar } from 'react-chartjs-2';
+import {
+  LineChart,
+  Line as RechartsLine,
+  BarChart,
+  Bar as RechartsBar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  Legend as RechartsLegend,
+  ResponsiveContainer,
+  PieChart,
+  Pie as RechartsPie,
+  Cell,
+} from "recharts";
 
 ChartJS.register(
   CategoryScale,
@@ -37,9 +52,10 @@ ChartJS.register(
   LineElement,
   Title,
   Tooltip,
-  Legend
-);
-ChartJS.register(ArcElement);
+  Legend,
+  ArcElement,
+  BarElement
+);ChartJS.register(ArcElement);
 
 const Admin = () => {
   const [users, setUsers] = useState<UserLoginStats[]>([]);
@@ -256,21 +272,41 @@ const Admin = () => {
 
       {summary && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <Card className="p-4">
-            <h3 className="font-semibold mb-2">Utilisateurs totaux</h3>
-            <p className="text-2xl">{summary.nbUsers}</p>
+          <Card className="p-6 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-blue-600 mb-1">Utilisateurs totaux</p>
+                <p className="text-3xl font-bold text-blue-900">{summary.nbUsers}</p>
+              </div>
+              <Users className="h-10 w-10 text-blue-300" />
+            </div>
           </Card>
-          <Card className="p-4">
-            <h3 className="font-semibold mb-2">Connexions totales</h3>
-            <p className="text-2xl">{summary.nbLogins}</p>
+          <Card className="p-6 bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-green-600 mb-1">Connexions totales</p>
+                <p className="text-3xl font-bold text-green-900">{summary.nbLogins}</p>
+              </div>
+              <LogIn className="h-10 w-10 text-green-300" />
+            </div>
           </Card>
-          <Card className="p-4">
-            <h3 className="font-semibold mb-2">Avis totaux</h3>
-            <p className="text-2xl">{summary.nbReviews}</p>
+          <Card className="p-6 bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-purple-600 mb-1">Avis totaux</p>
+                <p className="text-3xl font-bold text-purple-900">{summary.nbReviews}</p>
+              </div>
+              <MessageSquare className="h-10 w-10 text-purple-300" />
+            </div>
           </Card>
-          <Card className="p-4">
-            <h3 className="font-semibold mb-2">J'aime totaux</h3>
-            <p className="text-2xl">{summary.nbLikes}</p>
+          <Card className="p-6 bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-orange-600 mb-1">J'aime totaux</p>
+                <p className="text-3xl font-bold text-orange-900">{summary.nbLikes}</p>
+              </div>
+              <Heart className="h-10 w-10 text-orange-300" />
+            </div>
           </Card>
         </div>
       )}
@@ -283,30 +319,72 @@ const Admin = () => {
         </TabsList>
 
         <TabsContent value="users">
-          <Card className="p-4">
-            <div className="mb-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="md:col-span-1">
-                <h4 className="font-semibold mb-2">Statut utilisateurs</h4>
-                <div className="h-40">
-                  <Pie data={activeChartData} />
+          <div className="space-y-6">
+            {/* KPI Charts */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Pie: Utilisateurs actifs vs inactifs */}
+              <Card className="p-4">
+                <h4 className="font-semibold mb-4">Statut des utilisateurs</h4>
+                <div className="h-64 flex items-center justify-center">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <RechartsPie
+                        data={[
+                          { name: 'Actifs', value: Object.values(userDetails).filter(u => u?.isActive).length },
+                          { name: 'Inactifs', value: Object.values(userDetails).filter(u => u && !u.isActive).length }
+                        ]}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, value }) => `${name}: ${value}`}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        <Cell fill="#34D399" />
+                        <Cell fill="#FCA5A5" />
+                      </RechartsPie>
+                      <RechartsTooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
                 </div>
-              </div>
-              <div className="md:col-span-2">
-                {/* Table principal */}
-              </div>
+              </Card>
+
+              {/* Bar: Top utilisateurs par connexions */}
+              <Card className="p-4">
+                <h4 className="font-semibold mb-4">Top 5 utilisateurs (connexions)</h4>
+                <div className="h-64 flex items-center justify-center">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={users.sort((a, b) => b.totalLogins - a.totalLogins).slice(0, 5).map(u => ({
+                      name: userDetails[u.userId]?.name?.substring(0, 10) || u.userId.substring(0, 8),
+                      logins: u.totalLogins
+                    }))}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <RechartsTooltip />
+                      <RechartsBar dataKey="logins" fill="#3B82F6" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </Card>
             </div>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nom</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Dernière connexion</TableHead>
-                  <TableHead>Total connexions</TableHead>
-                  <TableHead>Moyenne jours entre connexions</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
+
+            {/* Table: Détails utilisateurs */}
+            <Card className="p-4">
+              <h3 className="text-lg font-semibold mb-4">Liste des utilisateurs ({users.length})</h3>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nom</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Dernière connexion</TableHead>
+                    <TableHead>Total connexions</TableHead>
+                    <TableHead>Moyenne jours entre connexions</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
               <TableBody>
                 {users.map((user) => {
                   const details = userDetails[user.userId];
@@ -403,36 +481,53 @@ const Admin = () => {
                 })}
               </TableBody>
             </Table>
-          </Card>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="logins">
-          <Card className="p-4">
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold mb-4">Graphique des connexions</h3>
-              <div className="h-[300px]">
-                <Line data={loginChartData} options={{ maintainAspectRatio: false }} />
+          <div className="space-y-6">
+            <Card className="p-4">
+              <h3 className="text-lg font-semibold mb-4">Timeline des connexions</h3>
+              <div className="h-80 flex items-center justify-center">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={loginEvents.map((event, idx) => ({
+                    time: formatDate(event.timestamp).split(' ')[1] || `Evt ${idx}`,
+                    count: idx + 1
+                  }))}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="time" />
+                    <YAxis />
+                    <RechartsTooltip />
+                    <RechartsLegend />
+                    <RechartsLine type="monotone" dataKey="count" stroke="#10B981" name="Connexions cumulées" />
+                  </LineChart>
+                </ResponsiveContainer>
               </div>
-            </div>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>ID Utilisateur</TableHead>
-                  <TableHead>Type</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loginEvents.map((event, index) => (
-                  <TableRow key={index}>
-                    <TableCell>{formatDate(event.timestamp)}</TableCell>
-                    <TableCell>{event.userId}</TableCell>
-                    <TableCell>{event.type}</TableCell>
+            </Card>
+
+            <Card className="p-4">
+              <h3 className="text-lg font-semibold mb-4">Historique détaillé ({loginEvents.length})</h3>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>ID Utilisateur</TableHead>
+                    <TableHead>Type</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Card>
+                </TableHeader>
+                <TableBody>
+                  {loginEvents.map((event, index) => (
+                    <TableRow key={index}>
+                      <TableCell>{formatDate(event.timestamp)}</TableCell>
+                      <TableCell>{event.userId}</TableCell>
+                      <TableCell>{event.type}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="reviews">

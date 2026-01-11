@@ -37,10 +37,6 @@ interface BookWithReviews extends Book {
 
 export default function Home() {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  
-
-  
 
   return (
     <div className="min-h-screen">
@@ -102,16 +98,6 @@ export default function Home() {
           <Collection />
         </div>
       </section>
-
-      {/* Review Modal */}
-      <ReviewModal
-        isOpen={reviewModal.isOpen}
-        onClose={() => setReviewModal({ isOpen: false })}
-        bookTitle={reviewModal.book?.title || ""}
-        bookIsbn13={reviewModal.book?.isbn13}
-        onSubmit={handleSubmitReview}
-        isLoading={isSubmittingReview}
-      />
     </div>
   );
 }
