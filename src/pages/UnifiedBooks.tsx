@@ -53,7 +53,7 @@ export default function UnifiedBooks() {
   const loadAllBooks = async () => {
     setLoading(true);
     try {
-      const response = await apiFetch<Page<Book>>("/book?page=0&size=50");
+        const response = await apiFetch<Page<Book>>("/books?page=0&size=50");
       const books = response?.content || [];
       
       // Charger les reviews pour chaque livre
@@ -119,7 +119,7 @@ export default function UnifiedBooks() {
     setSearched(true);
 
     try {
-      const localData = await apiFetch<Page<Book>>(`/book?q=${encodeURIComponent(searchQuery)}&page=0&size=50`);
+        const localData = await apiFetch<Page<Book>>(`/books?q=${encodeURIComponent(searchQuery)}&page=0&size=50`);
       const books = localData?.content || [];
       const booksWithReviews = await Promise.all(
         books.map(async (book) => {

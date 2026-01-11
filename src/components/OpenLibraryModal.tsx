@@ -22,7 +22,7 @@ export default function OpenLibraryModal({ open, onOpenChange, onAdded }: OpenLi
     if (query.trim().length < 2) return;
     setLoading(true);
     try {
-      const res = await apiFetch<{ content: Book[] }>(`/book/search-openlibrary?title=${encodeURIComponent(query)}&page=0&size=12`);
+      const res = await apiFetch<{ content: Book[] }>(`/books/search?title=${encodeURIComponent(query)}&page=0&size=12`);
       setResults(res?.content || []);
     } catch (e) {
       console.error("Recherche OpenLibrary échouée", e);
@@ -35,7 +35,7 @@ export default function OpenLibraryModal({ open, onOpenChange, onAdded }: OpenLi
   const add = async (b: Book) => {
     if (!b.openlibraryId) return;
     try {
-      await apiFetch(`/book/add-from-openlibrary?openlibraryId=${encodeURIComponent(b.openlibraryId)}`, { method: "POST" });
+      await apiFetch(`/books/sync/${encodeURIComponent(b.openlibraryId)}`, { method: "POST" });
       if (onAdded) onAdded();
     } catch (e) {
       console.error("Ajout OpenLibrary échoué", e);

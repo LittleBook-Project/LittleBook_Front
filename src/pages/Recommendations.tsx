@@ -42,7 +42,7 @@ export default function Recommendations() {
         if (list.length === 0) {
           // Fallback: show top books if recommendation service returned nothing
           try {
-            const page = await apiFetch(`/book?page=0&size=10`);
+            const page = await apiFetch(`/books?page=0&size=10`);
             const fallback = (page?.content || []).map((b: any) => ({ isbn: b.isbn13 || b.isbn10 || b.openlibraryId || b.id, title: b.title, authors: b.authors, averageRating: undefined }));
             setItems(fallback);
             // enrich fallback
@@ -68,7 +68,7 @@ export default function Recommendations() {
               const isbn = it.isbn;
               try {
                 // try list endpoint
-                const page = await apiFetch(`/book?isbn=${encodeURIComponent(isbn)}&page=0&size=1`);
+                const page = await apiFetch(`/books?isbn=${encodeURIComponent(isbn)}&page=0&size=1`);
                 const book = page?.content?.[0];
                 if (book) {
                   return {
@@ -99,7 +99,7 @@ export default function Recommendations() {
       } catch (err) {
         console.warn("Failed to load recommendations:", err);
         try {
-          const page = await apiFetch(`/book?page=0&size=10`);
+          const page = await apiFetch(`/books?page=0&size=10`);
           const fallback = (page?.content || []).map((b: any) => ({ isbn: b.isbn13 || b.isbn10 || b.openlibraryId || b.id, title: b.title, authors: b.authors, averageRating: undefined }));
           setItems(fallback);
           setEnriched((page?.content || []).map((b: any) => ({ isbn: b.isbn13 || b.isbn10 || b.openlibraryId || b.id, title: b.title, authors: b.authors, averageRating: undefined, coverUrl: b.coverUrl, publishYear: b.publishYear, bookId: b.id })));
@@ -165,7 +165,7 @@ export default function Recommendations() {
           setReviewOpen(false);
           setLoading(true);
           try { /* re-run effect by simple reload */
-            const page = await apiFetch(`/book?page=0&size=10`);
+            const page = await apiFetch(`/books?page=0&size=10`);
             setEnriched((page?.content || []).map((b: any) => ({ isbn: b.isbn13 || b.isbn10 || b.openlibraryId || b.id, title: b.title, authors: b.authors, averageRating: undefined, coverUrl: b.coverUrl, publishYear: b.publishYear, bookId: b.id })));
           } catch (e) {}
           setLoading(false);
